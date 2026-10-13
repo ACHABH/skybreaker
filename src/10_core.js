@@ -281,6 +281,10 @@ class Debris {
       const y = this.py[i];
       if (isl && isl.alive !== false && this.grace[i] <= 0 && y > isl.minY - 4 && y < isl.maxY + 40) {
         const x = this.px[i], z = this.pz[i], hh = this.sy[i] * 0.5;
+        const fl = isl.floor; if (fl && y - hh < fl.top && y > fl.top - 3 && (x - fl.cx) * (x - fl.cx) + (z - fl.cz) * (z - fl.cz) < fl.r * fl.r) {
+          if (this.heavy[i]) { Fx.shatter(this, i); this.kill(i); continue; }
+          this.py[i] = fl.top + hh; if (this.vy[i] < 0) this.vy[i] *= -0.3; this.vx[i] *= 0.7; this.vz[i] *= 0.7;
+        }
         if (this.heavy[i]) {
           const speed = Math.sqrt(this.vx[i] * this.vx[i] + this.vy[i] * this.vy[i] + this.vz[i] * this.vz[i]);
           if (speed > 2.5 && this.rest[i] <= 0) {

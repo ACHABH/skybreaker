@@ -13,6 +13,7 @@ const UI = {
     <div id="mine"><span class="big">100%</span><span class="lb">REMAINING</span></div>
     <div class="ibar"><i></i><u class="hide"></u></div><div id="gh" class="hide"></div><div id="sb" class="hide"></div><div id="rows"></div></div>
   <div id="timer" class="pan"><div class="t">0:00</div><div class="p"></div></div>
+  <div id="hearts"></div>
   <div id="chain"><div class="n">x0</div><div class="l">CHAIN REACTION</div></div>
   <div id="cross"></div>
   <div id="hotbar"></div>
@@ -26,7 +27,7 @@ const UI = {
 </div>
 <div id="ovl" class="hide"></div>`;
     this.scr = Q('#scr'); this.hudEl = Q('#hud'); this.ovl = Q('#ovl');
-    this.el = { mine: Q('#mine .big'), bar: Q('.ibar i'), goal: Q('.ibar u'), rows: Q('#rows'), rhd: Q('#rhd'), rsub: Q('#rsub'), gh: Q('#gh'), sb: Q('#sb'), race: Q('#race'), t: Q('#timer .t'), p: Q('#timer .p'), chain: Q('#chain'), cn: Q('#chain .n'), cl: Q('#chain .l'), hot: Q('#hotbar'), toasts: Q('#toasts'), ban: Q('#banner'), bh: Q('#banner h1'), bp: Q('#banner p'), count: Q('#count'), hint: Q('#hint'), draft: Q('#draft'), sec: Q('#sec'), secbar: Q('#secbar'), cross: Q('#cross') };
+    this.el = { mine: Q('#mine .big'), bar: Q('.ibar i'), goal: Q('.ibar u'), rows: Q('#rows'), rhd: Q('#rhd'), rsub: Q('#rsub'), gh: Q('#gh'), sb: Q('#sb'), race: Q('#race'), t: Q('#timer .t'), p: Q('#timer .p'), chain: Q('#chain'), cn: Q('#chain .n'), cl: Q('#chain .l'), hot: Q('#hotbar'), toasts: Q('#toasts'), ban: Q('#banner'), bh: Q('#banner h1'), bp: Q('#banner p'), count: Q('#count'), hint: Q('#hint'), draft: Q('#draft'), sec: Q('#sec'), secbar: Q('#secbar'), cross: Q('#cross'), hearts: Q('#hearts') };
     ui.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) { Snd.init(); UI.act(b.dataset.a, b.dataset.v, b); } });
     ui.addEventListener('mouseover', e => { const b = e.target.closest('[data-isl]'); if (b) UI.preview(b.dataset.isl); });
     ui.addEventListener('input', e => { const b = e.target; if (b.dataset.rng === 'sens') { Save.d.sens = Game.sens = +b.value; Save.save(); } if (b.dataset.rng === 'vol') { Save.d.vol = Snd.vol = +b.value; if (Snd.master) Snd.master.gain.value = Snd.vol; Save.save(); } });
@@ -83,7 +84,7 @@ const UI = {
       h = `<h2 class="sec">Controls</h2><div class="kv">
       <b>W A S D</b><span>Move</span><b>Mouse</b><span>Look &amp; aim (arrow keys also turn the camera)</span><b>Space</b><span>Jump (hold while falling to glide a little with Dash)</span><b>Left click</b><span>Use selected tool / item (hold for beams &amp; held items)</span>
       <b>1&ndash;9, 0 / Wheel / Tab</b><span>Select tool or item</span><b>Shift</b><span>Dash</span><b>E</b><span>Grappling hook (aim at any surface)</span><b>Q</b><span>Activate a Secret Power &mdash; some need Hold Q + Right click</span>
-      <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>F5</b><span>Switch between third-person and first-person view</span><b>Esc</b><span>Pause</span></div>
+      <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>T</b><span>Climb back up to the island if you land on the Unbreakable Layer</span><b>Hearts</b><span>You have 3. Falling off the island's side costs one; at zero you lose. Holes in the ground just drop you onto the layer.</span><b>F5</b><span>Switch between third-person and first-person view</span><b>Esc</b><span>Pause</span></div>
       <p class="sub" style="margin-top:16px">Tip: don't just hit things &mdash; cut the supports. Unsupported structures fall, heavy debris crushes what's below, and long chains win matches. Secret Powers hide inside item drops and last only 5 seconds.</p>${back('title')}`;
     } else if (name === 'settings') {
       h = `<h2 class="sec">Settings</h2><div class="set"><label>Mouse sensitivity</label><input type="range" min=".3" max="2.5" step=".05" value="${S.sens}" data-rng="sens"><label>Volume</label><input type="range" min="0" max="1" step=".05" value="${S.vol}" data-rng="vol"></div>
@@ -124,7 +125,15 @@ const UI = {
     const g = Game.rules.goal; if (g && g < 100) { e.goal.classList.remove('hide'); e.goal.style.left = (100 - g) + '%'; } else e.goal.classList.add('hide');
   },
   /* ---------- HUD ---------- */
+  hearts(n, lost) {
+    const e = this.el.hearts; if (!e) return;
+    if (n < 0) { e.style.display = 'none'; this._hn = n; return; } e.style.display = '';
+    if (this._hn !== n || lost) {
+      this._hn = n; e.innerHTML = [0, 1, 2].map(i => `<span class="${i < n ? 'on' : 'off'}${lost && i === n ? ' pop' : ''}">♥</span>`).join('');
+    }
+  },
   hud(h) {
+    if (h.hearts !== undefined) this.hearts(h.hearts);
     const e = this.el, c = Game.cfg; if (!c) return;
     const integ = Math.max(0, h.integ), txt = integ < 10 ? integ.toFixed(1) : Math.round(integ);
     if (this.lastInteg !== txt) { e.mine.textContent = txt + '%'; this.lastInteg = txt; }
@@ -205,9 +214,10 @@ const UI = {
     const rows = `<div class="res">${r.rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('')}</div>`;
     const tbl = r.table ? `<table class="tbl"><tr><th>#</th><th>BREAKER</th><th>ISLAND</th><th>DESTROYED</th><th>CHAIN</th></tr>${r.table.map(t => `<tr class="${t.me ? 'me' : ''} ${t.win ? 'w' : ''}"><td>${t.rank}</td><td>${t.name}</td><td>${t.kind}</td><td>${t.dmg}</td><td>${t.chain}</td></tr>`).join('')}</table>` : '';
     const aw = r.awards.length ? `<div class="aw">${r.awards.map(([t, who, d]) => `<div><em>${t}</em><b>${who}</b>${d}</div>`).join('')}</div>` : '';
+    const rv = r.revenge ? `<div class="rv"><img alt="You win. This is my revenge." src="${Floor.revengeURL()}"><p><b>You broke the entire island and you win.</b> And the Unbreakable Layer under it? Broken too. This is my revenge.</p></div>` : '';
     const nb = r.newBest.map(n => `<div class="nb">★ NEW RECORD — ${n}</div>`).join('');
     const c = Game.cfg, hasNext = c.mode === 'campaign' && r.win && c.mission + 1 < MISSIONS.length && Save.unlocked(c.mission + 1);
-    this.ovl.className = 'ovl'; this.ovl.innerHTML = `<div class="box"><h1 class="${r.win ? 'win' : ''}">${r.title}</h1>${r.mname ? `<div class="rs" style="margin:0">${r.mname}</div>` : ''}<p class="rs">${r.reason || ''}</p>${stars}${sr}${nb}${tbl}${r.table ? `<div class="chips" style="margin:10px 0 0"><span class="lb">${r.rowsTitle === 'YOU' ? 'YOUR' : r.rowsTitle + "'S"} STATS</span></div>` : ''}${rows}${aw}
+    this.ovl.className = 'ovl'; this.ovl.innerHTML = `<div class="box"><h1 class="${r.win ? 'win' : ''}">${r.title}</h1>${r.mname ? `<div class="rs" style="margin:0">${r.mname}</div>` : ''}<p class="rs">${r.reason || ''}</p>${rv}${stars}${sr}${nb}${tbl}${r.table ? `<div class="chips" style="margin:10px 0 0"><span class="lb">${r.rowsTitle === 'YOU' ? 'YOUR' : r.rowsTitle + "'S"} STATS</span></div>` : ''}${rows}${aw}
       <div class="acts">${hasNext ? this.btn('next', 'Next mission', '', 'go') : ''}${this.btn('restart', 'Play again', '', hasNext ? '' : 'go')}${this.btn('menu', 'Main menu')}</div></div>`;
     this.ovl.scrollTop = 0;
   },

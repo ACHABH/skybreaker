@@ -55,6 +55,7 @@ Game.clear = function () {
   if (P.avatar) { scene.remove(P.avatar); P.avatar = null; }
   if (Game.ghost && Game.ghost.av) { scene.remove(Game.ghost.av); } Game.ghost = null;
   if (Game.lavaSea) { scene.remove(Game.lavaSea); Game.lavaSea = null; }
+  Game.removeFloor(); Game.floorBreak = null;
   if (P.ropeLine) P.ropeLine.visible = false;
   GRAV.scale = 1; P.windX = P.windZ = 0; Game.cine = null; Game.draft = null; Game.draftKeys = false;
 };
@@ -87,6 +88,7 @@ Game.begin = function (cfg) {
     Game.pi = Game.islands[0]; makeDecorIslands(4, 230);
   } else { Game.pi = mkIsland(kind, 0, 0, 0, false); makeDecorIslands(7, 150); }
   const I = Game.pi; applyTheme(I.theme);
+  Game.hearts = 3; Game.knockedOut = false; Game.floorBreak = null; P.floorT = 0; P.tpCd = 0; Game.addFloor(I);
   I.hooks.chain = n => { if (window.UI) UI.chain(n); };
   I.hooks.chainEnd = (n, lost) => { if (window.UI) UI.chainEnd(n, lost); };
   for (const x of Game.islands) x.hooks.destroyed = isl => Game.onIslandDestroyed(isl);
@@ -98,7 +100,7 @@ Game.begin = function (cfg) {
   else if (mode === 'solo') { R.time = 300; R.drafts = [60, 120, 180]; R.final = 240; R.esc = 240; }
   else if (mode === 'campaign') { R.time = mission.limit; R.drafts = [.2, .4, .6].map(f => Math.round(mission.limit * f)); R.final = mission.limit * .8; R.esc = R.final; R.pool = ITEM_ORDER.slice(0, mission.pool); R.goal = mission.goal; }
   else if (mode === 'challenge') { R.time = chal.time; R.drafts = chal.drafts.slice(); R.pool = chal.pool.slice(); R.final = chal.time * .8; R.esc = chal.time * .8; if (chal.level) R.level = chal.level; }
-  else if (mode === 'endless') { R.time = 0; R.drafts = [30, 90, 150, 210, 270, 330, 390]; R.esc = 1e9; R.wave = 1; Game.lives = 3; Game.reforming = 0; Game.waveScore = 0; }
+  else if (mode === 'endless') { R.time = 0; R.drafts = [30, 90, 150, 210, 270, 330, 390]; R.esc = 1e9; R.wave = 1; Game.reforming = 0; Game.waveScore = 0; }
   else if (mode === 'free') { R.time = 0; R.drafts = []; }
   if (chal && chal.kit) P.slots = P.slots.filter(s => chal.kit.includes(s.id));
   if (chal && chal.itemUses) R.itemUses = chal.itemUses;
@@ -211,7 +213,8 @@ Game.finish = function (win, reason, winnerIsl) {
   const destroyed = isl.integrity() <= THRESH + .01 || isl.destroyed;
   if (destroyed && win !== false || (mode === 'mp' && destroyed)) { isl.finalCollapse(); Snd.play('bigboom', 1); }
   Game.cine = { I: isl, t: 0 }; camShake.v = .8;
-  const res = Game.buildResults(win, reason, winnerIsl);
+  if (isl === I && destroyed && win && I.floor) Game.floorBreak = { t: 0, done: false };
+  const res = Game.buildResults(win, reason, winnerIsl); res.revenge = !!Game.floorBreak;
   setTimeout(() => { if (Game.state === 'ended') { UI.showResults(res); Snd.play(res.win ? 'win' : 'lose', .8); } }, 4800);
   if (window.UI) UI.banner(win ? (mode === 'mp' ? 'VICTORY' : 'COMPLETE') : (reason && reason.startsWith('Time') ? "TIME'S UP" : mode === 'mp' ? 'DEFEAT' : 'FAILED'), reason, 4000);
 };
@@ -224,9 +227,9 @@ Game.buildResults = function (win, reason, winnerIsl) {
   if (mode === 'mp') {
     const all = [{ name: 'YOU', isl: I, me: true }, ...Game.bots.map(b => ({ name: b.name, isl: b.I, bot: b }))];
     all.forEach(a => { a.dmg = 100 - a.isl.integrity(); a.score = a.isl.stats.score; });
-    const winner = winnerIsl ? all.find(a => a.isl === winnerIsl) : all.slice().sort((a, b) => (b.dmg - a.dmg) || (b.score - a.score))[0];
+    const winner = winnerIsl ? all.find(a => a.isl === winnerIsl) : all.slice().filter(a => !(Game.knockedOut && a.me)).sort((a, b) => (b.dmg - a.dmg) || (b.score - a.score))[0];
     res.win = winner.me; res.title = winner.me ? 'VICTORY' : 'DEFEAT'; res.winner = winner.name;
-    res.reason = winnerIsl ? (winner.me ? 'You destroyed your island first!' : winner.name + ' destroyed their island first') : (winner.me ? 'Time expired. You had the most destruction.' : 'Time expired. ' + winner.name + ' had the most destruction.');
+    res.reason = Game.knockedOut ? 'You ran out of hearts. ' + winner.name + ' takes the win.' : winnerIsl ? (winner.me ? 'You destroyed your island first!' : winner.name + ' destroyed their island first') : (winner.me ? 'Time expired. You had the most destruction.' : 'Time expired. ' + winner.name + ' had the most destruction.');
     res.rows = rowsFor(winner.isl.stats, winner.isl, t); res.rowsTitle = winner.name === 'YOU' ? 'YOU' : winner.name;
     res.table = all.slice().sort((a, b) => b.dmg - a.dmg).map((a, i) => ({ rank: i + 1, name: a.name, kind: ISLES[a.isl.kind] ? ISLES[a.isl.kind].name : a.isl.kind, dmg: fmtp(a.dmg), chain: 'x' + a.isl.stats.chainMax, me: a.me, win: a === winner }));
     const best = (f) => all.slice().sort((a, b) => f(b) - f(a))[0];
@@ -267,14 +270,14 @@ Game.buildResults = function (win, reason, winnerIsl) {
 /* ---------- HUD feed ---------- */
 Game.hudInfo = function () {
   const I = Game.pi, R = Game.rules, c = Game.cfg, mode = c.mode, t = Game.t;
-  const h = { integ: I.integrity(), t: 0, label: 'TIME', phase: '', race: null, sub: '' };
+  const h = { integ: I.integrity(), t: 0, label: 'TIME', phase: '', race: null, sub: '', hearts: mode === 'free' ? -1 : Game.hearts };
   if (R.time) { h.t = Math.max(0, R.time - t); }
   else h.t = t, h.label = mode === 'endless' ? 'SURVIVED' : 'SANDBOX';
   let nextDrop = null; for (const s of Game.sched) if (s.kind === 'draft' && s.t > t) { nextDrop = s.t; break; }
   if (R.time && t >= R.final && R.final) h.phase = 'FINAL DESTRUCTION'; else if (nextDrop !== null) h.phase = 'NEXT ITEM DROP  ' + fmt(nextDrop - t); else h.phase = mode === 'mp' ? 'FINAL DESTRUCTION PHASE' : '';
   if (mode === 'mp') { h.race = [{ name: 'YOU', integ: I.integrity(), me: true, col: '#4aa8ff' }, ...Game.bots.map(b => ({ name: b.name, integ: b.I.integrity(), col: '#' + b.col.toString(16).padStart(6, '0') }))].sort((a, b) => a.integ - b.integ); }
   if (I.bossHud) h.sub = I.bossHud();
-  if (mode === 'endless') h.sub = 'WAVE ' + R.wave + '   ♥ ' + Game.lives;
+  if (mode === 'endless') h.sub = 'WAVE ' + R.wave;
   if (Game.mission) h.goal = Game.mission.goal;
   if (Game.ghost && Game.ghostDelta !== undefined) h.ghost = Game.ghostDelta;
   return h;
@@ -354,7 +357,7 @@ Game.frame = function (dt) {
     focusSun(P.pos.x, P.pos.y, P.pos.z);
     if (window.UI) UI.hud(Game.hudInfo());
   } else if (st === 'ended') {
-    worldStep(dt); const c = Game.cine; if (c) {
+    worldStep(dt); Game.updateFloorBreak(dt); const c = Game.cine; if (c) {
       c.t += dt; const I = c.I, u = clamp(c.t / 5, 0, 1), a = c.t * .25 + 1, dist = lerp(50, 120, u), hgt = lerp(24, 60, u);
       camera.position.set(I.cx + Math.sin(a) * dist, I.cy + hgt, I.cz + Math.cos(a) * dist); camera.lookAt(I.cx, I.cy - 6, I.cz); focusSun(I.cx, I.cy, I.cz);
       if (Game.cine && c.t < 3 && Math.random() < dt * 8) { const tp = randTarget(I, 0); Fx.explosion(tp.x, tp.y, tp.z, 3, { col: 0xff8a3a }); }
@@ -380,7 +383,7 @@ Game.chaosSwap = function () {
 Game.resetFree = function () {
   const k = Game.cfg.kind; Game.islands.forEach(i => i.dispose()); Game.islands = []; clearEffects();
   Game.pi = mkIsland(k, 0, 0, 0, false); attachHazards(Game.pi); Game.pi.hooks.chain = n => UI.chain(n); Game.pi.hooks.chainEnd = (n, l) => UI.chainEnd(n, l); Game.pi.hooks.destroyed = isl => Game.onIslandDestroyed(isl);
-  spawnPlayer(); UI.toast('Island rebuilt', 'info');
+  spawnPlayer(); Game.addFloor(Game.pi); UI.toast('Island rebuilt', 'info');
 };
 Game.endlessTick = function (dt) {
   const I = Game.pi, R = Game.rules, t = Game.t, w = Math.floor(t / 60) + 1;
@@ -393,10 +396,15 @@ Game.endlessTick = function (dt) {
   Game.regT = (Game.regT || 0) - dt;
   if (Game.regT <= 0 && !Game.reforming) { Game.regT = 2.4; let n = 0; while (I.dead.length && n < 3) { const d = I.dead.shift(); if (!d.p.alive && t - d.t > 4) { I.revive(d.p); n++; } else if (d.p.alive) continue; else { I.dead.push(d); break; } } }
   if (Game.reforming) { let n = 0; while (I.dead.length && n < 50) { const d = I.dead.shift(); if (!d.p.alive) { I.revive(d.p); n++; } } if (!I.dead.length) Game.reforming = 0; }
-  if (I.stats.falls > Game.livesUsed || Game.livesUsed === undefined) { if (Game.livesUsed !== undefined) { Game.lives = 3 - I.stats.falls; if (Game.lives <= 0) Game.finish(true, 'Out of lives'); } Game.livesUsed = I.stats.falls; }
 };
 Game.erodeTick = function (dt) {
   const I = Game.pi, e = Game.erode; e.acc += dt; if (e.acc < 1.1) return; e.acc = 0;
   let best = null, bd = -1; for (let k = 0; k < 60; k++) { const p = I.pieces[(Math.random() * I.pieces.length) | 0]; if (!p.alive || !p.terr || p.collapseT >= 0) continue; const d = Math.hypot(p.x - I.cx, p.z - I.cz) + Math.random() * 3; if (d > bd) { bd = d; best = p; } }
   if (best) { for (let k = 0; k < 3; k++) { I.kill(best, 'fall'); } }
+};
+Game.outOfHearts = function () {
+  if (Game.finished) return; Game.knockedOut = true;
+  const mode = Game.cfg.mode;
+  if (mode === 'endless') Game.finish(true, 'You ran out of hearts');
+  else Game.finish(false, 'You fell three times — out of hearts');
 };

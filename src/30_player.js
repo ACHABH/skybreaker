@@ -63,11 +63,34 @@ function spawnPlayer() {
   P.camYaw = 0; P.camPitch = .4; P.yaw = P.camYaw;
   P.lastGroundY = P.pos.y;
 }
+function safeSpot(I) {
+  const s = I.spawn, g = I.groundAt(s.x, s.z, I.cy + 30);
+  if (g !== null && g > I.cy - 1) return new V3(s.x, g + .05, s.z);
+  let best = null;
+  for (let k = 0; k < 90; k++) {
+    const p = I.pieces[(Math.random() * I.pieces.length) | 0];
+    if (!p.alive || p.phased || !p.solid || p.collapseT >= 0 || p.maxY < I.cy - 6) continue;
+    if (Math.hypot(p.x - I.cx, p.z - I.cz) > I.R0 * VX * .8) continue;
+    if (!best || p.maxY > best.maxY + .4) best = p;
+  }
+  if (!best) return new V3(s.x, s.y, s.z);
+  const g2 = I.groundAt(best.x, best.z, I.cy + 40); return new V3(best.x, (g2 === null ? best.maxY : g2) + .05, best.z);
+}
 function playerFall(reason) {
   const I = Game.pi; I.stats.falls++; Snd.play(reason === 'lava' ? 'fire' : 'whoosh', .8);
   if (reason === 'lava') { Fx.explosion(P.pos.x, P.pos.y + 1, P.pos.z, 2, { col: 0xff5a1a }); }
-  P.pos.copy(I.spawn); P.vel.set(0, 0, 0); P.grap = null; P.stun = .5;
-  if (window.UI) UI.toast(reason === 'lava' ? 'BURNED — respawning' : 'YOU FELL — respawning', 'warn');
+  P.pos.copy(safeSpot(I)); P.vel.set(0, 0, 0); P.grap = null; P.stun = .5; P.floorT = 0;
+  const mode = Game.cfg && Game.cfg.mode;
+  if (mode && mode !== 'free' && Game.hearts > 0) {
+    Game.hearts--; if (window.UI) UI.hearts(Game.hearts, true);
+    if (Game.hearts <= 0) { if (window.UI) UI.toast('NO HEARTS LEFT', 'warn'); Game.outOfHearts(); return; }
+  }
+  if (window.UI) UI.toast((reason === 'lava' ? 'BURNED' : 'YOU FELL') + (mode && mode !== 'free' ? '  —  ' + Game.hearts + (Game.hearts === 1 ? ' HEART' : ' HEARTS') + ' LEFT' : '  —  respawning'), 'warn');
+}
+function climbOut() {
+  const I = Game.pi; if (P.tpCd > 0 || P.stun > 0) return;
+  P.tpCd = 3; P.pos.copy(safeSpot(I)); P.vel.set(0, 0, 0); P.grap = null; P.floorT = 0; Snd.play('dash', .6); Fx.dust(P.pos.x, P.pos.y, P.pos.z, 8, 0xcfd8ff, 2, 1);
+  if (window.UI) UI.toast('Back on the island', 'info');
 }
 /* ---------- aim ---------- */
 function updateAim() {
@@ -218,18 +241,20 @@ function movePlayer(dt) {
   // candidate solids
   cand.length = 0; const ex = 2.5 + Math.abs(P.vel.x) * dt, ez = 2.5 + Math.abs(P.vel.z) * dt;
   I.queryBox(P.pos.x - ex, P.pos.y - 2.5 - Math.max(0, -P.vel.y * dt), P.pos.z - ez, P.pos.x + ex, P.pos.y + PH + 2, P.pos.z + ez, p => { if (p.solid && !p.phased) cand.push(p); });
-  P.onGround = false; P.gp = null;
+  P.onGround = false; P.gp = null; const prevY = P.pos.y; P.tpCd = Math.max(0, (P.tpCd || 0) - dt);
   const sub = Math.max(1, Math.ceil(Math.max(Math.abs(P.vel.x), Math.abs(P.vel.z), Math.abs(P.vel.y)) * dt / .4));
   const sdt = dt / sub;
   for (let s = 0; s < sub; s++) {
     stepAxis('x', P.vel.x * sdt); stepAxis('z', P.vel.z * sdt); stepAxis('y', P.vel.y * sdt);
   }
+  P.onFloor = floorLand(I, prevY);
+  if (P.onFloor) { P.floorT = (P.floorT || 0) + dt; if (P.floorT > 2.2 && Game.t - (P.hintT || -99) > 14) { P.hintT = Game.t; if (window.UI) UI.toast('Press T to climb back up to the island', 'info'); } } else P.floorT = 0;
   // facing
   if (P.aimT > 0) { P.aimT -= dt; P.yaw = lerpAngle(P.yaw, P.camYaw, Math.min(1, dt * 20)); }
   else if (moving) { const ty = Math.atan2(-wx, -wz); P.yaw = lerpAngle(P.yaw, ty, Math.min(1, dt * 14)); }
   // hazards
   if (P.pos.y < I.minY - 28) playerFall('void');
-  if (I.lavaCells.size) { const ci = Math.round((P.pos.x - I.cx) / VX), cj = Math.round((P.pos.z - I.cz) / VX); if (I.lavaCells.has(ci + ',' + cj) && P.pos.y < I.cy + .3 && !P.grap) playerFall('lava'); }
+  if (I.lavaCells.size) { const ci = Math.round((P.pos.x - I.cx) / VX), cj = Math.round((P.pos.z - I.cz) / VX); if (I.lavaCells.has(ci + ',' + cj) && P.pos.y < I.cy + .3 && P.pos.y > I.cy - 3.5 && !P.grap) playerFall('lava'); }
   if (I.lavaLevel > -900 && P.pos.y < I.cy + I.lavaLevel) playerFall('lava');
   if (P.onGround) P.lastGroundY = P.pos.y;
 }
@@ -276,6 +301,7 @@ function updateCamera(dt) {
   if (P.fp) { const ex = P.pos.x, ey = P.pos.y + 1.62, ez = P.pos.z; P.cam.set(ex, ey, ez); P.fwd.set(-bx, -by, -bz); const sh = camShake.v * .35; camera.position.set(ex + rnd(-sh, sh), ey + rnd(-sh, sh), ez + rnd(-sh, sh)); camera.lookAt(camera.position.x + P.fwd.x * 10, camera.position.y + P.fwd.y * 10, camera.position.z + P.fwd.z * 10); const fv = P.dashT > 0 ? 94 : 82; camera.fov += (fv - camera.fov) * Math.min(1, dt * 10); camera.updateProjectionMatrix(); return; }
   for (let t = 1.4; t < dist; t += .5) { if (I.pointSolid(tx + bx * t, ty + by * t, tz + bz * t)) { dist = Math.max(1.4, t - .6); break; } }
   P.cam.set(tx + bx * dist, ty + by * dist, tz + bz * dist);
+  if (I.floor && P.pos.y > I.floor.top - .5 && P.cam.y < I.floor.top + .6 && Math.hypot(P.cam.x - I.floor.cx, P.cam.z - I.floor.cz) < I.floor.r + 3) P.cam.y = I.floor.top + .6;
   P.fwd.set(-bx, -by, -bz);
   const sh = camShake.v * .5;
   camera.position.set(P.cam.x + rnd(-sh, sh), P.cam.y + rnd(-sh, sh), P.cam.z + rnd(-sh, sh));
@@ -316,6 +342,7 @@ function updateViewmodel(dt, slot) {
 function updatePlayer(dt) {
   const I = Game.pi;
   if (Input.pressed.F5) toggleView();
+  if (Input.pressed.KeyT) climbOut();
   if (Input.pressed.KeyE && P.slots.length) doGrapple();
   if (Input.pressed.ShiftLeft || Input.pressed.ShiftRight) doDash();
   for (let i = 0; i < 10; i++) { const code = i < 9 ? 'Digit' + (i + 1) : 'Digit0'; if (Input.pressed[code] && !Game.draftKeys) selectSlot(i); }

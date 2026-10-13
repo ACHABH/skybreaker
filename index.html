@@ -113,7 +113,7 @@ h2.sec{font-family:var(--fd);font-weight:400;font-size:clamp(26px,4vw,44px);marg
 .slot .nm{position:absolute;left:0;right:0;bottom:2px;font-size:8.5px;text-align:center;color:#cfd8f5;letter-spacing:.04em;display:none}
 .slot.sel .nm{display:block}
 .slot.sel .u{bottom:12px}
-#toasts{position:absolute;left:50%;top:92px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;width:min(520px,92vw)}
+#toasts{position:absolute;left:50%;top:124px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;width:min(520px,92vw)}
 .toast{padding:7px 16px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--aether);font-weight:700;letter-spacing:.05em;font-size:13.5px;animation:tin .2s;border-radius:2px}
 .toast.good{border-left-color:var(--good)}.toast.warn{border-left-color:var(--warn)}.toast.secret{border-left-color:var(--gold);color:var(--gold)}
 @keyframes tin{from{transform:translateY(-8px);opacity:0}}
@@ -170,6 +170,16 @@ h2.sec{font-family:var(--fd);font-weight:400;font-size:clamp(26px,4vw,44px);marg
 .btn[data-a="reset"]{border-left-color:var(--bad)}
 #scr>:first-child{margin-top:auto}#scr>:last-child{margin-bottom:auto}
 #scr{padding-bottom:6vh}
+#hearts{position:absolute;left:50%;top:76px;transform:translateX(-50%);display:flex;gap:6px;font-size:28px;line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.6)}
+#hearts .on{color:#ff4d6d}
+#hearts .off{color:rgba(255,255,255,.22)}
+#hearts .pop{animation:hpop .5s}
+@keyframes hpop{0%{transform:scale(1.8) rotate(-12deg);color:#fff}100%{transform:none}}
+#hud.ended #hearts{display:none}
+.rv{margin:8px 0 12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.rv img{width:min(240px,100%);aspect-ratio:1;border:3px solid var(--gold);border-radius:4px;transform:rotate(-2deg)}
+.rv p{flex:1 1 220px;margin:0;font-size:15px;line-height:1.45;color:var(--mute)}
+.rv b{color:var(--gold)}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="ui"></div>
@@ -457,6 +467,10 @@ class Debris {
       const y = this.py[i];
       if (isl && isl.alive !== false && this.grace[i] <= 0 && y > isl.minY - 4 && y < isl.maxY + 40) {
         const x = this.px[i], z = this.pz[i], hh = this.sy[i] * 0.5;
+        const fl = isl.floor; if (fl && y - hh < fl.top && y > fl.top - 3 && (x - fl.cx) * (x - fl.cx) + (z - fl.cz) * (z - fl.cz) < fl.r * fl.r) {
+          if (this.heavy[i]) { Fx.shatter(this, i); this.kill(i); continue; }
+          this.py[i] = fl.top + hh; if (this.vy[i] < 0) this.vy[i] *= -0.3; this.vx[i] *= 0.7; this.vz[i] *= 0.7;
+        }
         if (this.heavy[i]) {
           const speed = Math.sqrt(this.vx[i] * this.vx[i] + this.vy[i] * this.vy[i] + this.vz[i] * this.vz[i]);
           if (speed > 2.5 && this.rest[i] <= 0) {
@@ -1332,11 +1346,34 @@ function spawnPlayer() {
   P.camYaw = 0; P.camPitch = .4; P.yaw = P.camYaw;
   P.lastGroundY = P.pos.y;
 }
+function safeSpot(I) {
+  const s = I.spawn, g = I.groundAt(s.x, s.z, I.cy + 30);
+  if (g !== null && g > I.cy - 1) return new V3(s.x, g + .05, s.z);
+  let best = null;
+  for (let k = 0; k < 90; k++) {
+    const p = I.pieces[(Math.random() * I.pieces.length) | 0];
+    if (!p.alive || p.phased || !p.solid || p.collapseT >= 0 || p.maxY < I.cy - 6) continue;
+    if (Math.hypot(p.x - I.cx, p.z - I.cz) > I.R0 * VX * .8) continue;
+    if (!best || p.maxY > best.maxY + .4) best = p;
+  }
+  if (!best) return new V3(s.x, s.y, s.z);
+  const g2 = I.groundAt(best.x, best.z, I.cy + 40); return new V3(best.x, (g2 === null ? best.maxY : g2) + .05, best.z);
+}
 function playerFall(reason) {
   const I = Game.pi; I.stats.falls++; Snd.play(reason === 'lava' ? 'fire' : 'whoosh', .8);
   if (reason === 'lava') { Fx.explosion(P.pos.x, P.pos.y + 1, P.pos.z, 2, { col: 0xff5a1a }); }
-  P.pos.copy(I.spawn); P.vel.set(0, 0, 0); P.grap = null; P.stun = .5;
-  if (window.UI) UI.toast(reason === 'lava' ? 'BURNED — respawning' : 'YOU FELL — respawning', 'warn');
+  P.pos.copy(safeSpot(I)); P.vel.set(0, 0, 0); P.grap = null; P.stun = .5; P.floorT = 0;
+  const mode = Game.cfg && Game.cfg.mode;
+  if (mode && mode !== 'free' && Game.hearts > 0) {
+    Game.hearts--; if (window.UI) UI.hearts(Game.hearts, true);
+    if (Game.hearts <= 0) { if (window.UI) UI.toast('NO HEARTS LEFT', 'warn'); Game.outOfHearts(); return; }
+  }
+  if (window.UI) UI.toast((reason === 'lava' ? 'BURNED' : 'YOU FELL') + (mode && mode !== 'free' ? '  —  ' + Game.hearts + (Game.hearts === 1 ? ' HEART' : ' HEARTS') + ' LEFT' : '  —  respawning'), 'warn');
+}
+function climbOut() {
+  const I = Game.pi; if (P.tpCd > 0 || P.stun > 0) return;
+  P.tpCd = 3; P.pos.copy(safeSpot(I)); P.vel.set(0, 0, 0); P.grap = null; P.floorT = 0; Snd.play('dash', .6); Fx.dust(P.pos.x, P.pos.y, P.pos.z, 8, 0xcfd8ff, 2, 1);
+  if (window.UI) UI.toast('Back on the island', 'info');
 }
 /* ---------- aim ---------- */
 function updateAim() {
@@ -1487,18 +1524,20 @@ function movePlayer(dt) {
   // candidate solids
   cand.length = 0; const ex = 2.5 + Math.abs(P.vel.x) * dt, ez = 2.5 + Math.abs(P.vel.z) * dt;
   I.queryBox(P.pos.x - ex, P.pos.y - 2.5 - Math.max(0, -P.vel.y * dt), P.pos.z - ez, P.pos.x + ex, P.pos.y + PH + 2, P.pos.z + ez, p => { if (p.solid && !p.phased) cand.push(p); });
-  P.onGround = false; P.gp = null;
+  P.onGround = false; P.gp = null; const prevY = P.pos.y; P.tpCd = Math.max(0, (P.tpCd || 0) - dt);
   const sub = Math.max(1, Math.ceil(Math.max(Math.abs(P.vel.x), Math.abs(P.vel.z), Math.abs(P.vel.y)) * dt / .4));
   const sdt = dt / sub;
   for (let s = 0; s < sub; s++) {
     stepAxis('x', P.vel.x * sdt); stepAxis('z', P.vel.z * sdt); stepAxis('y', P.vel.y * sdt);
   }
+  P.onFloor = floorLand(I, prevY);
+  if (P.onFloor) { P.floorT = (P.floorT || 0) + dt; if (P.floorT > 2.2 && Game.t - (P.hintT || -99) > 14) { P.hintT = Game.t; if (window.UI) UI.toast('Press T to climb back up to the island', 'info'); } } else P.floorT = 0;
   // facing
   if (P.aimT > 0) { P.aimT -= dt; P.yaw = lerpAngle(P.yaw, P.camYaw, Math.min(1, dt * 20)); }
   else if (moving) { const ty = Math.atan2(-wx, -wz); P.yaw = lerpAngle(P.yaw, ty, Math.min(1, dt * 14)); }
   // hazards
   if (P.pos.y < I.minY - 28) playerFall('void');
-  if (I.lavaCells.size) { const ci = Math.round((P.pos.x - I.cx) / VX), cj = Math.round((P.pos.z - I.cz) / VX); if (I.lavaCells.has(ci + ',' + cj) && P.pos.y < I.cy + .3 && !P.grap) playerFall('lava'); }
+  if (I.lavaCells.size) { const ci = Math.round((P.pos.x - I.cx) / VX), cj = Math.round((P.pos.z - I.cz) / VX); if (I.lavaCells.has(ci + ',' + cj) && P.pos.y < I.cy + .3 && P.pos.y > I.cy - 3.5 && !P.grap) playerFall('lava'); }
   if (I.lavaLevel > -900 && P.pos.y < I.cy + I.lavaLevel) playerFall('lava');
   if (P.onGround) P.lastGroundY = P.pos.y;
 }
@@ -1545,6 +1584,7 @@ function updateCamera(dt) {
   if (P.fp) { const ex = P.pos.x, ey = P.pos.y + 1.62, ez = P.pos.z; P.cam.set(ex, ey, ez); P.fwd.set(-bx, -by, -bz); const sh = camShake.v * .35; camera.position.set(ex + rnd(-sh, sh), ey + rnd(-sh, sh), ez + rnd(-sh, sh)); camera.lookAt(camera.position.x + P.fwd.x * 10, camera.position.y + P.fwd.y * 10, camera.position.z + P.fwd.z * 10); const fv = P.dashT > 0 ? 94 : 82; camera.fov += (fv - camera.fov) * Math.min(1, dt * 10); camera.updateProjectionMatrix(); return; }
   for (let t = 1.4; t < dist; t += .5) { if (I.pointSolid(tx + bx * t, ty + by * t, tz + bz * t)) { dist = Math.max(1.4, t - .6); break; } }
   P.cam.set(tx + bx * dist, ty + by * dist, tz + bz * dist);
+  if (I.floor && P.pos.y > I.floor.top - .5 && P.cam.y < I.floor.top + .6 && Math.hypot(P.cam.x - I.floor.cx, P.cam.z - I.floor.cz) < I.floor.r + 3) P.cam.y = I.floor.top + .6;
   P.fwd.set(-bx, -by, -bz);
   const sh = camShake.v * .5;
   camera.position.set(P.cam.x + rnd(-sh, sh), P.cam.y + rnd(-sh, sh), P.cam.z + rnd(-sh, sh));
@@ -1585,6 +1625,7 @@ function updateViewmodel(dt, slot) {
 function updatePlayer(dt) {
   const I = Game.pi;
   if (Input.pressed.F5) toggleView();
+  if (Input.pressed.KeyT) climbOut();
   if (Input.pressed.KeyE && P.slots.length) doGrapple();
   if (Input.pressed.ShiftLeft || Input.pressed.ShiftRight) doDash();
   for (let i = 0; i < 10; i++) { const code = i < 9 ? 'Digit' + (i + 1) : 'Digit0'; if (Input.pressed[code] && !Game.draftKeys) selectSlot(i); }
@@ -2077,6 +2118,7 @@ Game.clear = function () {
   if (P.avatar) { scene.remove(P.avatar); P.avatar = null; }
   if (Game.ghost && Game.ghost.av) { scene.remove(Game.ghost.av); } Game.ghost = null;
   if (Game.lavaSea) { scene.remove(Game.lavaSea); Game.lavaSea = null; }
+  Game.removeFloor(); Game.floorBreak = null;
   if (P.ropeLine) P.ropeLine.visible = false;
   GRAV.scale = 1; P.windX = P.windZ = 0; Game.cine = null; Game.draft = null; Game.draftKeys = false;
 };
@@ -2109,6 +2151,7 @@ Game.begin = function (cfg) {
     Game.pi = Game.islands[0]; makeDecorIslands(4, 230);
   } else { Game.pi = mkIsland(kind, 0, 0, 0, false); makeDecorIslands(7, 150); }
   const I = Game.pi; applyTheme(I.theme);
+  Game.hearts = 3; Game.knockedOut = false; Game.floorBreak = null; P.floorT = 0; P.tpCd = 0; Game.addFloor(I);
   I.hooks.chain = n => { if (window.UI) UI.chain(n); };
   I.hooks.chainEnd = (n, lost) => { if (window.UI) UI.chainEnd(n, lost); };
   for (const x of Game.islands) x.hooks.destroyed = isl => Game.onIslandDestroyed(isl);
@@ -2120,7 +2163,7 @@ Game.begin = function (cfg) {
   else if (mode === 'solo') { R.time = 300; R.drafts = [60, 120, 180]; R.final = 240; R.esc = 240; }
   else if (mode === 'campaign') { R.time = mission.limit; R.drafts = [.2, .4, .6].map(f => Math.round(mission.limit * f)); R.final = mission.limit * .8; R.esc = R.final; R.pool = ITEM_ORDER.slice(0, mission.pool); R.goal = mission.goal; }
   else if (mode === 'challenge') { R.time = chal.time; R.drafts = chal.drafts.slice(); R.pool = chal.pool.slice(); R.final = chal.time * .8; R.esc = chal.time * .8; if (chal.level) R.level = chal.level; }
-  else if (mode === 'endless') { R.time = 0; R.drafts = [30, 90, 150, 210, 270, 330, 390]; R.esc = 1e9; R.wave = 1; Game.lives = 3; Game.reforming = 0; Game.waveScore = 0; }
+  else if (mode === 'endless') { R.time = 0; R.drafts = [30, 90, 150, 210, 270, 330, 390]; R.esc = 1e9; R.wave = 1; Game.reforming = 0; Game.waveScore = 0; }
   else if (mode === 'free') { R.time = 0; R.drafts = []; }
   if (chal && chal.kit) P.slots = P.slots.filter(s => chal.kit.includes(s.id));
   if (chal && chal.itemUses) R.itemUses = chal.itemUses;
@@ -2233,7 +2276,8 @@ Game.finish = function (win, reason, winnerIsl) {
   const destroyed = isl.integrity() <= THRESH + .01 || isl.destroyed;
   if (destroyed && win !== false || (mode === 'mp' && destroyed)) { isl.finalCollapse(); Snd.play('bigboom', 1); }
   Game.cine = { I: isl, t: 0 }; camShake.v = .8;
-  const res = Game.buildResults(win, reason, winnerIsl);
+  if (isl === I && destroyed && win && I.floor) Game.floorBreak = { t: 0, done: false };
+  const res = Game.buildResults(win, reason, winnerIsl); res.revenge = !!Game.floorBreak;
   setTimeout(() => { if (Game.state === 'ended') { UI.showResults(res); Snd.play(res.win ? 'win' : 'lose', .8); } }, 4800);
   if (window.UI) UI.banner(win ? (mode === 'mp' ? 'VICTORY' : 'COMPLETE') : (reason && reason.startsWith('Time') ? "TIME'S UP" : mode === 'mp' ? 'DEFEAT' : 'FAILED'), reason, 4000);
 };
@@ -2246,9 +2290,9 @@ Game.buildResults = function (win, reason, winnerIsl) {
   if (mode === 'mp') {
     const all = [{ name: 'YOU', isl: I, me: true }, ...Game.bots.map(b => ({ name: b.name, isl: b.I, bot: b }))];
     all.forEach(a => { a.dmg = 100 - a.isl.integrity(); a.score = a.isl.stats.score; });
-    const winner = winnerIsl ? all.find(a => a.isl === winnerIsl) : all.slice().sort((a, b) => (b.dmg - a.dmg) || (b.score - a.score))[0];
+    const winner = winnerIsl ? all.find(a => a.isl === winnerIsl) : all.slice().filter(a => !(Game.knockedOut && a.me)).sort((a, b) => (b.dmg - a.dmg) || (b.score - a.score))[0];
     res.win = winner.me; res.title = winner.me ? 'VICTORY' : 'DEFEAT'; res.winner = winner.name;
-    res.reason = winnerIsl ? (winner.me ? 'You destroyed your island first!' : winner.name + ' destroyed their island first') : (winner.me ? 'Time expired. You had the most destruction.' : 'Time expired. ' + winner.name + ' had the most destruction.');
+    res.reason = Game.knockedOut ? 'You ran out of hearts. ' + winner.name + ' takes the win.' : winnerIsl ? (winner.me ? 'You destroyed your island first!' : winner.name + ' destroyed their island first') : (winner.me ? 'Time expired. You had the most destruction.' : 'Time expired. ' + winner.name + ' had the most destruction.');
     res.rows = rowsFor(winner.isl.stats, winner.isl, t); res.rowsTitle = winner.name === 'YOU' ? 'YOU' : winner.name;
     res.table = all.slice().sort((a, b) => b.dmg - a.dmg).map((a, i) => ({ rank: i + 1, name: a.name, kind: ISLES[a.isl.kind] ? ISLES[a.isl.kind].name : a.isl.kind, dmg: fmtp(a.dmg), chain: 'x' + a.isl.stats.chainMax, me: a.me, win: a === winner }));
     const best = (f) => all.slice().sort((a, b) => f(b) - f(a))[0];
@@ -2289,14 +2333,14 @@ Game.buildResults = function (win, reason, winnerIsl) {
 /* ---------- HUD feed ---------- */
 Game.hudInfo = function () {
   const I = Game.pi, R = Game.rules, c = Game.cfg, mode = c.mode, t = Game.t;
-  const h = { integ: I.integrity(), t: 0, label: 'TIME', phase: '', race: null, sub: '' };
+  const h = { integ: I.integrity(), t: 0, label: 'TIME', phase: '', race: null, sub: '', hearts: mode === 'free' ? -1 : Game.hearts };
   if (R.time) { h.t = Math.max(0, R.time - t); }
   else h.t = t, h.label = mode === 'endless' ? 'SURVIVED' : 'SANDBOX';
   let nextDrop = null; for (const s of Game.sched) if (s.kind === 'draft' && s.t > t) { nextDrop = s.t; break; }
   if (R.time && t >= R.final && R.final) h.phase = 'FINAL DESTRUCTION'; else if (nextDrop !== null) h.phase = 'NEXT ITEM DROP  ' + fmt(nextDrop - t); else h.phase = mode === 'mp' ? 'FINAL DESTRUCTION PHASE' : '';
   if (mode === 'mp') { h.race = [{ name: 'YOU', integ: I.integrity(), me: true, col: '#4aa8ff' }, ...Game.bots.map(b => ({ name: b.name, integ: b.I.integrity(), col: '#' + b.col.toString(16).padStart(6, '0') }))].sort((a, b) => a.integ - b.integ); }
   if (I.bossHud) h.sub = I.bossHud();
-  if (mode === 'endless') h.sub = 'WAVE ' + R.wave + '   ♥ ' + Game.lives;
+  if (mode === 'endless') h.sub = 'WAVE ' + R.wave;
   if (Game.mission) h.goal = Game.mission.goal;
   if (Game.ghost && Game.ghostDelta !== undefined) h.ghost = Game.ghostDelta;
   return h;
@@ -2376,7 +2420,7 @@ Game.frame = function (dt) {
     focusSun(P.pos.x, P.pos.y, P.pos.z);
     if (window.UI) UI.hud(Game.hudInfo());
   } else if (st === 'ended') {
-    worldStep(dt); const c = Game.cine; if (c) {
+    worldStep(dt); Game.updateFloorBreak(dt); const c = Game.cine; if (c) {
       c.t += dt; const I = c.I, u = clamp(c.t / 5, 0, 1), a = c.t * .25 + 1, dist = lerp(50, 120, u), hgt = lerp(24, 60, u);
       camera.position.set(I.cx + Math.sin(a) * dist, I.cy + hgt, I.cz + Math.cos(a) * dist); camera.lookAt(I.cx, I.cy - 6, I.cz); focusSun(I.cx, I.cy, I.cz);
       if (Game.cine && c.t < 3 && Math.random() < dt * 8) { const tp = randTarget(I, 0); Fx.explosion(tp.x, tp.y, tp.z, 3, { col: 0xff8a3a }); }
@@ -2402,7 +2446,7 @@ Game.chaosSwap = function () {
 Game.resetFree = function () {
   const k = Game.cfg.kind; Game.islands.forEach(i => i.dispose()); Game.islands = []; clearEffects();
   Game.pi = mkIsland(k, 0, 0, 0, false); attachHazards(Game.pi); Game.pi.hooks.chain = n => UI.chain(n); Game.pi.hooks.chainEnd = (n, l) => UI.chainEnd(n, l); Game.pi.hooks.destroyed = isl => Game.onIslandDestroyed(isl);
-  spawnPlayer(); UI.toast('Island rebuilt', 'info');
+  spawnPlayer(); Game.addFloor(Game.pi); UI.toast('Island rebuilt', 'info');
 };
 Game.endlessTick = function (dt) {
   const I = Game.pi, R = Game.rules, t = Game.t, w = Math.floor(t / 60) + 1;
@@ -2415,13 +2459,171 @@ Game.endlessTick = function (dt) {
   Game.regT = (Game.regT || 0) - dt;
   if (Game.regT <= 0 && !Game.reforming) { Game.regT = 2.4; let n = 0; while (I.dead.length && n < 3) { const d = I.dead.shift(); if (!d.p.alive && t - d.t > 4) { I.revive(d.p); n++; } else if (d.p.alive) continue; else { I.dead.push(d); break; } } }
   if (Game.reforming) { let n = 0; while (I.dead.length && n < 50) { const d = I.dead.shift(); if (!d.p.alive) { I.revive(d.p); n++; } } if (!I.dead.length) Game.reforming = 0; }
-  if (I.stats.falls > Game.livesUsed || Game.livesUsed === undefined) { if (Game.livesUsed !== undefined) { Game.lives = 3 - I.stats.falls; if (Game.lives <= 0) Game.finish(true, 'Out of lives'); } Game.livesUsed = I.stats.falls; }
 };
 Game.erodeTick = function (dt) {
   const I = Game.pi, e = Game.erode; e.acc += dt; if (e.acc < 1.1) return; e.acc = 0;
   let best = null, bd = -1; for (let k = 0; k < 60; k++) { const p = I.pieces[(Math.random() * I.pieces.length) | 0]; if (!p.alive || !p.terr || p.collapseT >= 0) continue; const d = Math.hypot(p.x - I.cx, p.z - I.cz) + Math.random() * 3; if (d > bd) { bd = d; best = p; } }
   if (best) { for (let k = 0; k < 3; k++) { I.kill(best, 'fall'); } }
 };
+Game.outOfHearts = function () {
+  if (Game.finished) return; Game.knockedOut = true;
+  const mode = Game.cfg.mode;
+  if (mode === 'endless') Game.finish(true, 'You ran out of hearts');
+  else Game.finish(false, 'You fell three times — out of hearts');
+};
+
+/* =====================================================================
+   SKYBREAK — the Unbreakable Layer (meme floor), hearts and the revenge break
+   ===================================================================== */
+const MEMES = [
+  { face: 'smug', top: 'SKILL ISSUE', bot: 'THE FLOOR SAYS HI' },
+  { face: 'laugh', top: 'NICE TRY', bot: 'NOT TODAY' },
+  { face: 'stare', top: 'IS THAT ALL YOU GOT?', bot: '' },
+  { face: 'shades', top: 'FALLING AGAIN?', bot: 'NOPE. FLOOR.' },
+  { face: 'angry', top: 'GIT GUD', bot: 'I AM UNBREAKABLE' },
+  { face: 'cat', top: 'NO.', bot: 'YOU CANNOT BREAK THIS' },
+  { face: 'cry', top: 'BREAK ME', bot: 'I DARE YOU (YOU CANT)' },
+  { face: 'smug', top: 'BONK!', bot: 'GO BACK TO BREAKING' }
+];
+function memeFace(c, kind, x, y, r) {
+  const skin = kind === 'cat' ? '#f0a95a' : '#ffd23f';
+  c.save(); c.translate(x, y);
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.arc(8, 14, r, 0, 7); c.fill();
+  c.fillStyle = skin; c.strokeStyle = '#2a1a05'; c.lineWidth = r * .05; c.beginPath(); c.arc(0, 0, r, 0, 7); c.fill(); c.stroke();
+  if (kind === 'cat') { for (const s of [-1, 1]) { c.beginPath(); c.moveTo(s * r * .95, -r * .3); c.lineTo(s * r * .78, -r * 1.25); c.lineTo(s * r * .22, -r * .9); c.closePath(); c.fill(); c.stroke(); } }
+  c.fillStyle = '#2a1a05'; c.lineCap = 'round'; c.lineJoin = 'round';
+  const eye = (ex, ey, w, h) => { c.fillStyle = '#fff'; c.beginPath(); c.ellipse(ex, ey, w, h, 0, 0, 7); c.fill(); c.stroke(); c.fillStyle = '#2a1a05'; c.beginPath(); c.arc(ex + w * .15, ey + h * .1, w * .45, 0, 7); c.fill(); };
+  const mouth = (path) => { c.beginPath(); path(); c.stroke(); };
+  c.lineWidth = r * .07;
+  if (kind === 'smug') {
+    eye(-r * .38, -r * .15, r * .2, r * .2); eye(r * .38, -r * .15, r * .2, r * .2);
+    c.fillStyle = skin; for (const s of [-1, 1]) { c.fillRect(s * r * .38 - r * .24, -r * .4, r * .48, r * .24); }
+    c.strokeStyle = '#2a1a05'; c.beginPath(); c.moveTo(-r * .66, -r * .17); c.lineTo(-r * .12, -r * .17); c.moveTo(r * .12, -r * .17); c.lineTo(r * .66, -r * .17); c.stroke();
+    mouth(() => { c.moveTo(-r * .45, r * .42); c.quadraticCurveTo(r * .1, r * .62, r * .55, r * .2); });
+  } else if (kind === 'laugh') {
+    c.beginPath(); c.moveTo(-r * .6, -r * .1); c.lineTo(-r * .2, -r * .3); c.lineTo(-r * .6, -r * .5); c.moveTo(r * .6, -r * .1); c.lineTo(r * .2, -r * .3); c.lineTo(r * .6, -r * .5); c.stroke();
+    c.fillStyle = '#7a1b12'; c.beginPath(); c.moveTo(-r * .55, r * .15); c.quadraticCurveTo(0, r * .95, r * .55, r * .15); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = '#5fc8ff'; for (const s of [-1, 1]) { c.beginPath(); c.ellipse(s * r * .72, r * .1, r * .1, r * .17, 0, 0, 7); c.fill(); }
+  } else if (kind === 'stare') {
+    eye(-r * .36, -r * .12, r * .26, r * .3); eye(r * .36, -r * .12, r * .26, r * .3);
+    mouth(() => { c.moveTo(-r * .4, r * .5); c.lineTo(r * .4, r * .5); });
+  } else if (kind === 'shades') {
+    c.fillStyle = '#111'; c.beginPath(); c.roundRect ? c.roundRect(-r * .72, -r * .38, r * .6, r * .36, r * .1) : c.rect(-r * .72, -r * .38, r * .6, r * .36); c.fill();
+    c.beginPath(); c.roundRect ? c.roundRect(r * .12, -r * .38, r * .6, r * .36, r * .1) : c.rect(r * .12, -r * .38, r * .6, r * .36); c.fill(); c.fillRect(-r * .14, -r * .32, r * .28, r * .07);
+    mouth(() => { c.moveTo(-r * .45, r * .38); c.quadraticCurveTo(0, r * .72, r * .5, r * .32); });
+  } else if (kind === 'angry') {
+    eye(-r * .36, -r * .1, r * .2, r * .2); eye(r * .36, -r * .1, r * .2, r * .2);
+    c.lineWidth = r * .1; c.beginPath(); c.moveTo(-r * .66, -r * .52); c.lineTo(-r * .1, -r * .28); c.moveTo(r * .66, -r * .52); c.lineTo(r * .1, -r * .28); c.stroke(); c.lineWidth = r * .07;
+    mouth(() => { c.moveTo(-r * .45, r * .6); c.quadraticCurveTo(0, r * .3, r * .45, r * .6); });
+  } else if (kind === 'cry') {
+    eye(-r * .36, -r * .1, r * .2, r * .24); eye(r * .36, -r * .1, r * .2, r * .24);
+    c.fillStyle = '#5fc8ff'; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(s * r * .36, r * .1); c.quadraticCurveTo(s * r * .7, r * .5, s * r * .52, r * .9); c.quadraticCurveTo(s * r * .3, r * .5, s * r * .36, r * .1); c.fill(); }
+    mouth(() => { c.moveTo(-r * .4, r * .55); c.quadraticCurveTo(0, r * .3, r * .4, r * .55); });
+  } else if (kind === 'cat') {
+    eye(-r * .36, -r * .12, r * .2, r * .24); eye(r * .36, -r * .12, r * .2, r * .24);
+    c.fillStyle = '#e0607a'; c.beginPath(); c.moveTo(-r * .08, r * .12); c.lineTo(r * .08, r * .12); c.lineTo(0, r * .24); c.closePath(); c.fill();
+    mouth(() => { c.moveTo(0, r * .24); c.quadraticCurveTo(-r * .1, r * .45, -r * .3, r * .38); c.moveTo(0, r * .24); c.quadraticCurveTo(r * .1, r * .45, r * .3, r * .38); });
+    c.beginPath(); for (const s of [-1, 1]) for (const k of [-.1, .1]) { c.moveTo(s * r * .3, r * .22 + k * r); c.lineTo(s * r * .9, r * .16 + k * r * 2); } c.stroke();
+  } else if (kind === 'devil') {
+    c.fillStyle = '#c4182c'; for (const s of [-1, 1]) { c.beginPath(); c.moveTo(s * r * .55, -r * .78); c.lineTo(s * r * .9, -r * 1.3); c.lineTo(s * r * .22, -r * .95); c.closePath(); c.fill(); c.stroke(); }
+    eye(-r * .36, -r * .1, r * .2, r * .2); eye(r * .36, -r * .1, r * .2, r * .2);
+    c.lineWidth = r * .1; c.beginPath(); c.moveTo(-r * .66, -r * .5); c.lineTo(-r * .1, -r * .28); c.moveTo(r * .66, -r * .5); c.lineTo(r * .1, -r * .28); c.stroke(); c.lineWidth = r * .07;
+    c.fillStyle = '#7a1b12'; c.beginPath(); c.moveTo(-r * .62, r * .2); c.quadraticCurveTo(0, r * .98, r * .62, r * .2); c.quadraticCurveTo(0, r * .36, -r * .62, r * .2); c.fill(); c.stroke();
+    c.fillStyle = '#fff'; for (let i = -2; i <= 2; i++) c.fillRect(i * r * .17 - r * .05, r * .33 + (2 - Math.abs(i)) * r * .02, r * .1, r * .12);
+  }
+  c.restore();
+}
+function memeText(c, txt, y, size, maxW) {
+  if (!txt) return; c.save(); c.textAlign = 'center'; c.textBaseline = 'middle';
+  let s = size; const fam = "Impact,'Arial Black','Anton',sans-serif";
+  do { c.font = '900 ' + s + 'px ' + fam; s -= 4; } while (c.measureText(txt).width > maxW && s > 24);
+  c.lineJoin = 'round'; c.lineWidth = s * .22; c.strokeStyle = '#000'; c.strokeText(txt, 512, y); c.fillStyle = '#fff'; c.fillText(txt, 512, y); c.restore();
+}
+function drawMeme(m, S) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = S || 1024; const c = cv.getContext('2d'); c.scale(cv.width / 1024, cv.width / 1024);
+  const h = Math.random() * 360, g = c.createRadialGradient(512, 512, 40, 512, 512, 560);
+  g.addColorStop(0, `hsl(${h},70%,48%)`); g.addColorStop(1, `hsl(${(h + 50) % 360},70%,22%)`); c.fillStyle = g; c.fillRect(0, 0, 1024, 1024);
+  c.strokeStyle = 'rgba(255,255,255,.12)'; c.lineWidth = 6; for (let r = 80; r < 520; r += 70) { c.beginPath(); c.arc(512, 512, r, 0, 7); c.stroke(); }
+  c.strokeStyle = 'rgba(0,0,0,.55)'; c.lineWidth = 26; c.beginPath(); c.arc(512, 512, 499, 0, 7); c.stroke();
+  memeFace(c, m.face, 512, 520, 255);
+  memeText(c, m.top, 190, 118, 700); memeText(c, m.bot, 858, m.bot.length > 18 ? 74 : 96, 700);
+  return cv;
+}
+const Floor = {
+  mesh: null, shards: null, tex: null, tops: null, mats: null,
+  build(I) {
+    this.remove(); if (!I || I.kind === 'boss_void' || I.kind === 'boss_volcano') { if (I) I.floor = null; return; }
+    const FR = 27.5, top = I.minY - .35, m = MEMES[(Math.random() * MEMES.length) | 0], cv = drawMeme(m, 1024);
+    const tex = new T.CanvasTexture(cv); tex.anisotropy = 4; this.tex = tex; this.meme = m;
+    const g = new T.Group(), side = new T.MeshLambertMaterial({ color: 0x2b2a3a });
+    const topM = new T.MeshBasicMaterial({ map: tex }), botM = new T.MeshBasicMaterial({ map: tex });
+    this.mats = { side, topM, botM };
+    const body = new T.Mesh(new T.CylinderGeometry(FR, FR * .985, 1.3, 64), side); body.position.set(I.cx, top - .65, I.cz); g.add(body);
+    const tg = new T.CircleGeometry(FR, 64); tg.rotateX(-Math.PI / 2); const tm = new T.Mesh(tg, topM); tm.position.set(I.cx, top + .015, I.cz); g.add(tm);
+    const bg = new T.CircleGeometry(FR * .985, 64); bg.rotateX(Math.PI / 2); const bm = new T.Mesh(bg, botM); bm.position.set(I.cx, top - 1.31, I.cz); g.add(bm);
+    body.receiveShadow = true; scene.add(g); this.mesh = g; I.floor = { top, r: FR - .25, cx: I.cx, cz: I.cz, mesh: g, size: FR };
+    this.I = I; this.brokeT = -1;
+  },
+  remove() {
+    if (this.mesh) { scene.remove(this.mesh); this.mesh.traverse(o => { if (o.geometry) o.geometry.dispose(); }); this.mesh = null; }
+    if (this.shards) { for (const s of this.shards) { scene.remove(s.m); s.m.geometry.dispose(); } this.shards = null; }
+    if (this.mats) { this.mats.side.dispose(); this.mats.topM.dispose(); this.mats.botM.dispose(); this.mats = null; }
+    if (this.tex) { this.tex.dispose(); this.tex = null; }
+    this.brokeT = -1;
+  },
+  shatter() {
+    const I = this.I, f = I && I.floor; if (!f || !this.mesh || this.shards) return;
+    scene.remove(this.mesh); const N = 8, w = f.size * 2 / N, list = []; const mats = [this.mats.side, this.mats.side, this.mats.topM, this.mats.botM, this.mats.side, this.mats.side];
+    for (let a = 0; a < N; a++) for (let b = 0; b < N; b++) {
+      const dx = (a + .5) * w - f.size, dz = (b + .5) * w - f.size; if (Math.hypot(dx, dz) > f.size + w * .25) continue;
+      const geo = new T.BoxGeometry(w * .96, 1.3, w * .96), uv = geo.attributes.uv, pos = geo.attributes.position;
+      for (const grp of [2, 3]) for (let k = 0; k < 4; k++) { const vi = grp * 4 + k, x = pos.getX(vi) + dx, z = pos.getZ(vi) + dz; uv.setXY(vi, x / f.size * .5 + .5, -z / f.size * .5 + .5); }
+      const m = new T.Mesh(geo, mats); m.position.set(f.cx + dx, f.top - .65, f.cz + dz); scene.add(m);
+      const d = Math.hypot(dx, dz) || 1, sp = 6 + Math.random() * 7;
+      list.push({ m, vx: dx / d * sp * (.6 + d / f.size * .5) + rnd(-2, 2), vy: rnd(6, 17), vz: dz / d * sp * (.6 + d / f.size * .5) + rnd(-2, 2), rx: rnd(-4, 4), ry: rnd(-4, 4), rz: rnd(-4, 4), delay: d / f.size * .25 });
+    }
+    this.shards = list; this.brokeT = 0;
+    Fx.explosion(f.cx, f.top, f.cz, 9, { col: 0xffd070, col2: 0xffffff }); camShake.v = Math.max(camShake.v, 1); Snd.play('bigboom', 1);
+    for (let i = 0; i < 6; i++) Fx.dust(f.cx + rnd(-14, 14), f.top + .5, f.cz + rnd(-14, 14), 10, 0xcfc8e8, 3, 2.4);
+  },
+  update(dt) {
+    if (!this.shards) return; this.brokeT += dt; let alive = 0;
+    for (const s of this.shards) {
+      if (this.brokeT < s.delay) { alive++; continue; }
+      s.vy -= 30 * dt; s.m.position.x += s.vx * dt; s.m.position.y += s.vy * dt; s.m.position.z += s.vz * dt;
+      s.m.rotation.x += s.rx * dt; s.m.rotation.y += s.ry * dt; s.m.rotation.z += s.rz * dt;
+      if (s.m.position.y > this.I.cy - 140) alive++; else s.m.visible = false;
+    }
+    if (this.brokeT > 7 || !alive) { for (const s of this.shards) { scene.remove(s.m); s.m.geometry.dispose(); } this.shards = []; }
+  },
+  revengeURL() {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 640; const c = cv.getContext('2d'); c.scale(.625, .625);
+    const g = c.createLinearGradient(0, 0, 0, 1024); g.addColorStop(0, '#2a0f3d'); g.addColorStop(1, '#8a1d2e'); c.fillStyle = g; c.fillRect(0, 0, 1024, 1024);
+    c.strokeStyle = 'rgba(255,255,255,.1)'; c.lineWidth = 10; for (let i = -1024; i < 1024; i += 70) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i + 1024, 1024); c.stroke(); }
+    // cracked floor shards falling
+    c.fillStyle = '#4a4660'; c.strokeStyle = '#111'; c.lineWidth = 8;
+    for (let i = 0; i < 9; i++) { const x = 90 + i * 105 + Math.sin(i * 7) * 30, y = 590 + Math.sin(i * 3.1) * 90 + (i % 3) * 40, s = 55 + (i * 37) % 40; c.save(); c.translate(x, y); c.rotate(i * 1.3); c.fillRect(-s / 2, -s / 2, s, s * .8); c.strokeRect(-s / 2, -s / 2, s, s * .8); c.restore(); }
+    memeFace(c, 'devil', 512, 420, 230);
+    memeText(c, 'YOU WIN!', 120, 130, 760); memeText(c, 'THIS IS MY REVENGE', 880, 110, 900);
+    return cv.toDataURL('image/png');
+  }
+};
+Game.addFloor = function (I) { Floor.build(I); };
+Game.removeFloor = function () { Floor.remove(); };
+Game.updateFloorBreak = function (dt) {
+  const fb = Game.floorBreak; if (!fb) return; fb.t += dt;
+  if (!fb.done && fb.t > 1.4) { fb.done = true; Floor.shatter(); if (window.UI) UI.banner('THE UNBREAKABLE LAYER…', 'was breakable all along. This is my revenge.', 4200); }
+  if (fb.done && P.avatar) { fb.fv = (fb.fv || 0) + 30 * dt; P.avatar.position.y -= fb.fv * dt; P.avatar.rotation.z += dt * 3; P.avatar.rotation.x += dt * 2; }
+  Floor.update(dt);
+};
+/* Player standing on the layer: called from movePlayer. Returns true if landed. */
+function floorLand(I, prevY) {
+  const f = I.floor; if (!f || Floor.brokeT >= 0) return false;
+  const dx = P.pos.x - f.cx, dz = P.pos.z - f.cz;
+  if (dx * dx + dz * dz > f.r * f.r) return false;
+  if (P.pos.y <= f.top && prevY >= f.top - .6 && P.vel.y <= 0.001 + 12) { P.pos.y = f.top; if (P.vel.y < 0) P.vel.y = 0; P.onGround = true; P.gp = null; return true; }
+  return false;
+}
 
 /* =====================================================================
    SKYBREAK — menus, HUD, overlays
@@ -2438,6 +2640,7 @@ const UI = {
     <div id="mine"><span class="big">100%</span><span class="lb">REMAINING</span></div>
     <div class="ibar"><i></i><u class="hide"></u></div><div id="gh" class="hide"></div><div id="sb" class="hide"></div><div id="rows"></div></div>
   <div id="timer" class="pan"><div class="t">0:00</div><div class="p"></div></div>
+  <div id="hearts"></div>
   <div id="chain"><div class="n">x0</div><div class="l">CHAIN REACTION</div></div>
   <div id="cross"></div>
   <div id="hotbar"></div>
@@ -2451,7 +2654,7 @@ const UI = {
 </div>
 <div id="ovl" class="hide"></div>`;
     this.scr = Q('#scr'); this.hudEl = Q('#hud'); this.ovl = Q('#ovl');
-    this.el = { mine: Q('#mine .big'), bar: Q('.ibar i'), goal: Q('.ibar u'), rows: Q('#rows'), rhd: Q('#rhd'), rsub: Q('#rsub'), gh: Q('#gh'), sb: Q('#sb'), race: Q('#race'), t: Q('#timer .t'), p: Q('#timer .p'), chain: Q('#chain'), cn: Q('#chain .n'), cl: Q('#chain .l'), hot: Q('#hotbar'), toasts: Q('#toasts'), ban: Q('#banner'), bh: Q('#banner h1'), bp: Q('#banner p'), count: Q('#count'), hint: Q('#hint'), draft: Q('#draft'), sec: Q('#sec'), secbar: Q('#secbar'), cross: Q('#cross') };
+    this.el = { mine: Q('#mine .big'), bar: Q('.ibar i'), goal: Q('.ibar u'), rows: Q('#rows'), rhd: Q('#rhd'), rsub: Q('#rsub'), gh: Q('#gh'), sb: Q('#sb'), race: Q('#race'), t: Q('#timer .t'), p: Q('#timer .p'), chain: Q('#chain'), cn: Q('#chain .n'), cl: Q('#chain .l'), hot: Q('#hotbar'), toasts: Q('#toasts'), ban: Q('#banner'), bh: Q('#banner h1'), bp: Q('#banner p'), count: Q('#count'), hint: Q('#hint'), draft: Q('#draft'), sec: Q('#sec'), secbar: Q('#secbar'), cross: Q('#cross'), hearts: Q('#hearts') };
     ui.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) { Snd.init(); UI.act(b.dataset.a, b.dataset.v, b); } });
     ui.addEventListener('mouseover', e => { const b = e.target.closest('[data-isl]'); if (b) UI.preview(b.dataset.isl); });
     ui.addEventListener('input', e => { const b = e.target; if (b.dataset.rng === 'sens') { Save.d.sens = Game.sens = +b.value; Save.save(); } if (b.dataset.rng === 'vol') { Save.d.vol = Snd.vol = +b.value; if (Snd.master) Snd.master.gain.value = Snd.vol; Save.save(); } });
@@ -2508,7 +2711,7 @@ const UI = {
       h = `<h2 class="sec">Controls</h2><div class="kv">
       <b>W A S D</b><span>Move</span><b>Mouse</b><span>Look &amp; aim (arrow keys also turn the camera)</span><b>Space</b><span>Jump (hold while falling to glide a little with Dash)</span><b>Left click</b><span>Use selected tool / item (hold for beams &amp; held items)</span>
       <b>1&ndash;9, 0 / Wheel / Tab</b><span>Select tool or item</span><b>Shift</b><span>Dash</span><b>E</b><span>Grappling hook (aim at any surface)</span><b>Q</b><span>Activate a Secret Power &mdash; some need Hold Q + Right click</span>
-      <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>F5</b><span>Switch between third-person and first-person view</span><b>Esc</b><span>Pause</span></div>
+      <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>T</b><span>Climb back up to the island if you land on the Unbreakable Layer</span><b>Hearts</b><span>You have 3. Falling off the island's side costs one; at zero you lose. Holes in the ground just drop you onto the layer.</span><b>F5</b><span>Switch between third-person and first-person view</span><b>Esc</b><span>Pause</span></div>
       <p class="sub" style="margin-top:16px">Tip: don't just hit things &mdash; cut the supports. Unsupported structures fall, heavy debris crushes what's below, and long chains win matches. Secret Powers hide inside item drops and last only 5 seconds.</p>${back('title')}`;
     } else if (name === 'settings') {
       h = `<h2 class="sec">Settings</h2><div class="set"><label>Mouse sensitivity</label><input type="range" min=".3" max="2.5" step=".05" value="${S.sens}" data-rng="sens"><label>Volume</label><input type="range" min="0" max="1" step=".05" value="${S.vol}" data-rng="vol"></div>
@@ -2549,7 +2752,15 @@ const UI = {
     const g = Game.rules.goal; if (g && g < 100) { e.goal.classList.remove('hide'); e.goal.style.left = (100 - g) + '%'; } else e.goal.classList.add('hide');
   },
   /* ---------- HUD ---------- */
+  hearts(n, lost) {
+    const e = this.el.hearts; if (!e) return;
+    if (n < 0) { e.style.display = 'none'; this._hn = n; return; } e.style.display = '';
+    if (this._hn !== n || lost) {
+      this._hn = n; e.innerHTML = [0, 1, 2].map(i => `<span class="${i < n ? 'on' : 'off'}${lost && i === n ? ' pop' : ''}">♥</span>`).join('');
+    }
+  },
   hud(h) {
+    if (h.hearts !== undefined) this.hearts(h.hearts);
     const e = this.el, c = Game.cfg; if (!c) return;
     const integ = Math.max(0, h.integ), txt = integ < 10 ? integ.toFixed(1) : Math.round(integ);
     if (this.lastInteg !== txt) { e.mine.textContent = txt + '%'; this.lastInteg = txt; }
@@ -2630,9 +2841,10 @@ const UI = {
     const rows = `<div class="res">${r.rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join('')}</div>`;
     const tbl = r.table ? `<table class="tbl"><tr><th>#</th><th>BREAKER</th><th>ISLAND</th><th>DESTROYED</th><th>CHAIN</th></tr>${r.table.map(t => `<tr class="${t.me ? 'me' : ''} ${t.win ? 'w' : ''}"><td>${t.rank}</td><td>${t.name}</td><td>${t.kind}</td><td>${t.dmg}</td><td>${t.chain}</td></tr>`).join('')}</table>` : '';
     const aw = r.awards.length ? `<div class="aw">${r.awards.map(([t, who, d]) => `<div><em>${t}</em><b>${who}</b>${d}</div>`).join('')}</div>` : '';
+    const rv = r.revenge ? `<div class="rv"><img alt="You win. This is my revenge." src="${Floor.revengeURL()}"><p><b>You broke the entire island and you win.</b> And the Unbreakable Layer under it? Broken too. This is my revenge.</p></div>` : '';
     const nb = r.newBest.map(n => `<div class="nb">★ NEW RECORD — ${n}</div>`).join('');
     const c = Game.cfg, hasNext = c.mode === 'campaign' && r.win && c.mission + 1 < MISSIONS.length && Save.unlocked(c.mission + 1);
-    this.ovl.className = 'ovl'; this.ovl.innerHTML = `<div class="box"><h1 class="${r.win ? 'win' : ''}">${r.title}</h1>${r.mname ? `<div class="rs" style="margin:0">${r.mname}</div>` : ''}<p class="rs">${r.reason || ''}</p>${stars}${sr}${nb}${tbl}${r.table ? `<div class="chips" style="margin:10px 0 0"><span class="lb">${r.rowsTitle === 'YOU' ? 'YOUR' : r.rowsTitle + "'S"} STATS</span></div>` : ''}${rows}${aw}
+    this.ovl.className = 'ovl'; this.ovl.innerHTML = `<div class="box"><h1 class="${r.win ? 'win' : ''}">${r.title}</h1>${r.mname ? `<div class="rs" style="margin:0">${r.mname}</div>` : ''}<p class="rs">${r.reason || ''}</p>${rv}${stars}${sr}${nb}${tbl}${r.table ? `<div class="chips" style="margin:10px 0 0"><span class="lb">${r.rowsTitle === 'YOU' ? 'YOUR' : r.rowsTitle + "'S"} STATS</span></div>` : ''}${rows}${aw}
       <div class="acts">${hasNext ? this.btn('next', 'Next mission', '', 'go') : ''}${this.btn('restart', 'Play again', '', hasNext ? '' : 'go')}${this.btn('menu', 'Main menu')}</div></div>`;
     this.ovl.scrollTop = 0;
   },
