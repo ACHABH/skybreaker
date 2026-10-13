@@ -115,7 +115,7 @@ const Input = {
 window.addEventListener('keydown', e => {
   if (e.repeat) { if (Input.captureWanted) e.preventDefault(); return; }
   Input.keys[e.code] = true; Input.pressed[e.code] = true;
-  if (Input.captureWanted && ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  if (Input.captureWanted && ['Space', 'Tab', 'F5', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { Input.keys[e.code] = false; });
 window.addEventListener('blur', () => { Input.keys = {}; Input.mouse.l = Input.mouse.r = false; });

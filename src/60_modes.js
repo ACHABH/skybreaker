@@ -40,7 +40,7 @@ const Save = {
   total() { return Object.values(this.d.stars).reduce((a, b) => a + b, 0); },
   unlocked(i) { return this.d.unlockAll || i === 0 || (this.d.stars[MISSIONS[i - 1].id] || 0) >= 1; }
 };
-Game.sens = Save.d.sens; Snd.vol = Save.d.vol;
+Game.sens = Save.d.sens; Snd.vol = Save.d.vol; P.fp = !!Save.d.fp;
 
 /* ---------- session management ---------- */
 Game.bots = []; Game.decor = []; Game.ghost = null; Game.rec = null; Game.draft = null; Game.sched = []; Game.cine = null; Game.menuIsland = null;
@@ -300,6 +300,7 @@ function focusSun(x, y, z) { sun.target.position.set(x, y, z); sun.position.set(
 Game.frame = function (dt) {
   simT += dt;
   const st = Game.state;
+  if (st !== 'play') VM.g.visible = false;
   if (st === 'menu') {
     const I = Game.menuIsland; worldStep(dt);
     const a = simT * .12 + 1, d = 74; camera.position.set(Math.sin(a) * d, 30 + Math.sin(simT * .2) * 4, Math.cos(a) * d); camera.lookAt(0, -3, 0); focusSun(0, 0, 0);

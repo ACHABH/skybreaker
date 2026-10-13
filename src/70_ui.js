@@ -83,7 +83,7 @@ const UI = {
       h = `<h2 class="sec">Controls</h2><div class="kv">
       <b>W A S D</b><span>Move</span><b>Mouse</b><span>Look &amp; aim (arrow keys also turn the camera)</span><b>Space</b><span>Jump (hold while falling to glide a little with Dash)</span><b>Left click</b><span>Use selected tool / item (hold for beams &amp; held items)</span>
       <b>1&ndash;9, 0 / Wheel / Tab</b><span>Select tool or item</span><b>Shift</b><span>Dash</span><b>E</b><span>Grappling hook (aim at any surface)</span><b>Q</b><span>Activate a Secret Power &mdash; some need Hold Q + Right click</span>
-      <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>Esc</b><span>Pause</span></div>
+      <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>F5</b><span>Switch between third-person and first-person view</span><b>Esc</b><span>Pause</span></div>
       <p class="sub" style="margin-top:16px">Tip: don't just hit things &mdash; cut the supports. Unsupported structures fall, heavy debris crushes what's below, and long chains win matches. Secret Powers hide inside item drops and last only 5 seconds.</p>${back('title')}`;
     } else if (name === 'settings') {
       h = `<h2 class="sec">Settings</h2><div class="set"><label>Mouse sensitivity</label><input type="range" min=".3" max="2.5" step=".05" value="${S.sens}" data-rng="sens"><label>Volume</label><input type="range" min="0" max="1" step=".05" value="${S.vol}" data-rng="vol"></div>

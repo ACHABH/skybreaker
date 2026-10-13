@@ -8,7 +8,7 @@ Everything runs offline except the two Google Fonts (Bungee, Chakra Petch), whic
 
 ## Controls
 WASD move · Space jump · Shift dash · E grapple · Left click use tool · 1-0 / wheel / Tab select
-Q Secret Power (some: hold Q + right click) · 1-6 claim item drops · R rebuild (Free Break) · Esc pause
+F5 switch first/third-person view · Q Secret Power (some: hold Q + right click) · 1-6 claim item drops · R rebuild (Free Break) · Esc pause
 
 ## Modes
 Multiplayer match (you vs 5 AI bots, offline), Solo Break, Campaign (6 chapters + 3 bosses), 7 Challenges, Endless, Free Break.

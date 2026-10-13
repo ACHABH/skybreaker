@@ -291,7 +291,7 @@ const Input = {
 window.addEventListener('keydown', e => {
   if (e.repeat) { if (Input.captureWanted) e.preventDefault(); return; }
   Input.keys[e.code] = true; Input.pressed[e.code] = true;
-  if (Input.captureWanted && ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+  if (Input.captureWanted && ['Space', 'Tab', 'F5', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
 });
 window.addEventListener('keyup', e => { Input.keys[e.code] = false; });
 window.addEventListener('blur', () => { Input.keys = {}; Input.mouse.l = Input.mouse.r = false; });
@@ -1341,7 +1341,7 @@ function playerFall(reason) {
 /* ---------- aim ---------- */
 function updateAim() {
   const I = Game.pi, a = P.aim, f = P.fwd;
-  const ox = P.cam.x + f.x * (P.camDist * .8), oy = P.cam.y + f.y * (P.camDist * .8), oz = P.cam.z + f.z * (P.camDist * .8);
+  const cd = P.fp ? .35 : P.camDist * .8, ox = P.cam.x + f.x * cd, oy = P.cam.y + f.y * cd, oz = P.cam.z + f.z * cd;
   const r = I.rayHit(ox, oy, oz, f.x, f.y, f.z, 130, .3);
   if (r) { a.hit = true; a.x = r.x; a.y = r.y; a.z = r.z; a.piece = r.p; a.px = r.px; a.py = r.py; a.pz = r.pz; }
   else { a.hit = false; a.piece = null; a.x = ox + f.x * 60; a.y = oy + f.y * 60; a.z = oz + f.z * 60; a.px = a.x; a.py = a.y; a.pz = a.z; }
@@ -1411,7 +1411,9 @@ function throwBomb(I, from, to, o = {}) {
   });
   Snd.play('whoosh', .5);
 }
-function handPos(out) { facingDir(_fd); out.set(P.pos.x + _fd.x * .5 + Math.cos(P.camYaw) * .4, P.pos.y + 1.5, P.pos.z + _fd.z * .5 - Math.sin(P.camYaw) * .4); return out; }
+function handPos(out) {
+  if (P.fp) { const sy = Math.sin(P.camYaw), cy = Math.cos(P.camYaw); out.set(P.cam.x + P.fwd.x * .6 + cy * .3, P.cam.y + P.fwd.y * .6 - .22, P.cam.z + P.fwd.z * .6 - sy * .3); return out; }
+  facingDir(_fd); out.set(P.pos.x + _fd.x * .5 + Math.cos(P.camYaw) * .4, P.pos.y + 1.5, P.pos.z + _fd.z * .5 - Math.sin(P.camYaw) * .4); return out; }
 const _hp = new V3();
 function doDash() {
   if (P.dashCd > 0 || P.stun > 0) return false;
@@ -1535,11 +1537,12 @@ function updateCamera(dt) {
   const ka = ((k.ArrowLeft ? 1 : 0) - (k.ArrowRight ? 1 : 0)) * 2.2 * dt, kb = ((k.ArrowDown ? 1 : 0) - (k.ArrowUp ? 1 : 0)) * 1.6 * dt;
   P.camYaw += ka; P.camPitch += kb;
   if (!Input.locked && Input.lockFailed) { if (Math.abs(Input.nx) > .72) P.camYaw -= Math.sign(Input.nx) * (Math.abs(Input.nx) - .72) * 5 * dt; if (Math.abs(Input.ny) > .72) P.camPitch += Math.sign(Input.ny) * (Math.abs(Input.ny) - .72) * 3 * dt; }
-  P.camPitch = clamp(P.camPitch, -.75, 1.25);
+  P.camPitch = P.fp ? clamp(P.camPitch, -1.45, 1.45) : clamp(P.camPitch, -.75, 1.25);
   const cp = Math.cos(P.camPitch), sp = Math.sin(P.camPitch), sy = Math.sin(P.camYaw), cy = Math.cos(P.camYaw);
   const bx = sy * cp, by = sp, bz = cy * cp, rx = cy, rz = -sy;
   const tx = P.pos.x + rx * .9, ty = P.pos.y + 1.6, tz = P.pos.z + rz * .9;
   let dist = P.camDist;
+  if (P.fp) { const ex = P.pos.x, ey = P.pos.y + 1.62, ez = P.pos.z; P.cam.set(ex, ey, ez); P.fwd.set(-bx, -by, -bz); const sh = camShake.v * .35; camera.position.set(ex + rnd(-sh, sh), ey + rnd(-sh, sh), ez + rnd(-sh, sh)); camera.lookAt(camera.position.x + P.fwd.x * 10, camera.position.y + P.fwd.y * 10, camera.position.z + P.fwd.z * 10); const fv = P.dashT > 0 ? 94 : 82; camera.fov += (fv - camera.fov) * Math.min(1, dt * 10); camera.updateProjectionMatrix(); return; }
   for (let t = 1.4; t < dist; t += .5) { if (I.pointSolid(tx + bx * t, ty + by * t, tz + bz * t)) { dist = Math.max(1.4, t - .6); break; } }
   P.cam.set(tx + bx * dist, ty + by * dist, tz + bz * dist);
   P.fwd.set(-bx, -by, -bz);
@@ -1553,8 +1556,35 @@ function updateAvatar(av, dt, speed, swing, t) {
   u.legL.rotation.x = s; u.legR.rotation.x = -s; u.armL.rotation.x = -s * .8;
   if (swing > 0) { u.armR.rotation.x = -1.6 + (1 - swing / .3) * 2.4; } else u.armR.rotation.x = s * .8;
 }
+/* ---------- first-person view ---------- */
+const VM = (() => {
+  const g = new T.Group(); g.visible = false; g.renderOrder = 10;
+  const skin = new T.MeshPhongMaterial({ color: 0x4aa8ff, flatShading: true });
+  const arm = new T.Mesh(new T.BoxGeometry(.17, .17, .75), skin); arm.position.set(0, 0, .12); g.add(arm);
+  const hand = new T.Mesh(new T.BoxGeometry(.2, .2, .2), new T.MeshPhongMaterial({ color: 0xf2c9a0, flatShading: true })); hand.position.set(0, 0, -.27); g.add(hand);
+  const tool = new T.Group(); tool.position.set(0, .02, -.36); g.add(tool);
+  g.scale.setScalar(.5); g.position.set(.3, -.27, -.55); camera.add(g);
+  return { g, tool, skin, ud: { tool, toolId: null }, base: .34 };
+})();
+function toggleView() {
+  P.fp = !P.fp; Save.d.fp = P.fp; Save.save();
+  P.camPitch = P.fp ? clamp(P.camPitch, -1.45, 1.45) : clamp(P.camPitch, -.75, 1.25);
+  if (window.UI) UI.toast(P.fp ? 'FIRST PERSON  (F5 to switch)' : 'THIRD PERSON  (F5 to switch)', 'info');
+}
+function updateViewmodel(dt, slot) {
+  const vm = VM.g; vm.visible = !!P.fp && Game.state === 'play';
+  if (!vm.visible) return;
+  const id = slot ? slot.id : 'hammer';
+  VM.skin.color.setHex(Save.d.cos.body);
+  if (VM.ud.toolId !== id) { setAvatarTool({ userData: VM.ud }, id); const r = VM.ud.tool.rotation.x; VM.tool.rotation.x = (id === 'hammer' || id === 'titan' || id === 'pick') ? r + .95 : r; VM.tool.children.forEach(m => { m.castShadow = false; }); }
+  const sp = Math.hypot(P.vel.x, P.vel.z) * (P.onGround ? 1 : .2), t = Game.t;
+  const sw = P.swing > 0 ? Math.sin((1 - P.swing / .3) * Math.PI) : 0;
+  vm.position.set(.3 + Math.sin(t * 9) * .006 * Math.min(1, sp / 6), -.27 + Math.abs(Math.sin(t * 9)) * .012 * Math.min(1, sp / 6) - sw * .04, -.55 - sw * .08);
+  vm.rotation.set(-sw * 1.1, sw * .25, 0);
+}
 function updatePlayer(dt) {
   const I = Game.pi;
+  if (Input.pressed.F5) toggleView();
   if (Input.pressed.KeyE && P.slots.length) doGrapple();
   if (Input.pressed.ShiftLeft || Input.pressed.ShiftRight) doDash();
   for (let i = 0; i < 10; i++) { const code = i < 9 ? 'Digit' + (i + 1) : 'Digit0'; if (Input.pressed[code] && !Game.draftKeys) selectSlot(i); }
@@ -1569,12 +1599,12 @@ function updatePlayer(dt) {
     if (!P.hitDone && P.swingT > .1) { P.hitDone = true; if (P.pendingTool === 'hammer') { if (meleeHit('b', 24, 1.5)) { } } else if (P.pendingTool === 'pick') meleeHit('p', 17, .9); P.pendingTool = null; }
   }
   const s = P.slots[P.sel]; setAvatarTool(P.avatar, s ? s.id : 'hammer');
-  const av = P.avatar; av.position.set(P.pos.x, P.pos.y, P.pos.z); av.rotation.y = P.yaw;
+  const av = P.avatar; av.position.set(P.pos.x, P.pos.y, P.pos.z); av.rotation.y = P.yaw; av.visible = !P.fp; updateViewmodel(dt, s);
   updateAvatar(av, dt, Math.hypot(P.vel.x, P.vel.z), P.swing, Game.t);
   // grapple rope
   if (P.grap) {
     if (!P.ropeLine) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(new Float32Array(6), 3)); P.ropeLine = new T.Line(g, new T.LineBasicMaterial({ color: 0xffe9a8 })); P.ropeLine.frustumCulled = false; scene.add(P.ropeLine); }
-    const a = P.ropeLine.geometry.attributes.position.array; a[0] = P.pos.x; a[1] = P.pos.y + 1.4; a[2] = P.pos.z; a[3] = P.grap.x; a[4] = P.grap.y; a[5] = P.grap.z; P.ropeLine.geometry.attributes.position.needsUpdate = true; P.ropeLine.visible = true;
+    const a = P.ropeLine.geometry.attributes.position.array; if (P.fp) { handPos(_hp); a[0] = _hp.x; a[1] = _hp.y; a[2] = _hp.z; } else { a[0] = P.pos.x; a[1] = P.pos.y + 1.4; a[2] = P.pos.z; } a[3] = P.grap.x; a[4] = P.grap.y; a[5] = P.grap.z; P.ropeLine.geometry.attributes.position.needsUpdate = true; P.ropeLine.visible = true;
   } else if (P.ropeLine) P.ropeLine.visible = false;
   // dash trail
   if (P.dashT > 0) glowP.emit(P.pos.x, P.pos.y + 1, P.pos.z, 0, 0, 0, 0x9fe0ff, .5, .35, 0, 2);
@@ -2032,7 +2062,7 @@ const Save = {
   total() { return Object.values(this.d.stars).reduce((a, b) => a + b, 0); },
   unlocked(i) { return this.d.unlockAll || i === 0 || (this.d.stars[MISSIONS[i - 1].id] || 0) >= 1; }
 };
-Game.sens = Save.d.sens; Snd.vol = Save.d.vol;
+Game.sens = Save.d.sens; Snd.vol = Save.d.vol; P.fp = !!Save.d.fp;
 
 /* ---------- session management ---------- */
 Game.bots = []; Game.decor = []; Game.ghost = null; Game.rec = null; Game.draft = null; Game.sched = []; Game.cine = null; Game.menuIsland = null;
@@ -2292,6 +2322,7 @@ function focusSun(x, y, z) { sun.target.position.set(x, y, z); sun.position.set(
 Game.frame = function (dt) {
   simT += dt;
   const st = Game.state;
+  if (st !== 'play') VM.g.visible = false;
   if (st === 'menu') {
     const I = Game.menuIsland; worldStep(dt);
     const a = simT * .12 + 1, d = 74; camera.position.set(Math.sin(a) * d, 30 + Math.sin(simT * .2) * 4, Math.cos(a) * d); camera.lookAt(0, -3, 0); focusSun(0, 0, 0);
@@ -2477,7 +2508,7 @@ const UI = {
       h = `<h2 class="sec">Controls</h2><div class="kv">
       <b>W A S D</b><span>Move</span><b>Mouse</b><span>Look &amp; aim (arrow keys also turn the camera)</span><b>Space</b><span>Jump (hold while falling to glide a little with Dash)</span><b>Left click</b><span>Use selected tool / item (hold for beams &amp; held items)</span>
       <b>1&ndash;9, 0 / Wheel / Tab</b><span>Select tool or item</span><b>Shift</b><span>Dash</span><b>E</b><span>Grappling hook (aim at any surface)</span><b>Q</b><span>Activate a Secret Power &mdash; some need Hold Q + Right click</span>
-      <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>Esc</b><span>Pause</span></div>
+      <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>F5</b><span>Switch between third-person and first-person view</span><b>Esc</b><span>Pause</span></div>
       <p class="sub" style="margin-top:16px">Tip: don't just hit things &mdash; cut the supports. Unsupported structures fall, heavy debris crushes what's below, and long chains win matches. Secret Powers hide inside item drops and last only 5 seconds.</p>${back('title')}`;
     } else if (name === 'settings') {
       h = `<h2 class="sec">Settings</h2><div class="set"><label>Mouse sensitivity</label><input type="range" min=".3" max="2.5" step=".05" value="${S.sens}" data-rng="sens"><label>Volume</label><input type="range" min="0" max="1" step=".05" value="${S.vol}" data-rng="vol"></div>
