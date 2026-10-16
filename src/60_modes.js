@@ -104,7 +104,7 @@ Game.begin = function (cfg) {
   else if (mode === 'free') { R.time = 0; R.drafts = []; }
   if (chal && chal.kit) P.slots = P.slots.filter(s => chal.kit.includes(s.id));
   if (chal && chal.itemUses) R.itemUses = chal.itemUses;
-  if (mode === 'free') for (const id of ITEM_ORDER) giveItem(id, 99999);
+  if (mode === 'free') { for (const id of ITEM_ORDER) giveItem(id, 99999); giveItem('kame', 99999); giveItem('nuke', 99999); }
   Game.sched = (R.drafts || []).map((t, i) => ({ t, kind: 'draft' }));
   if (chal && chal.chaos) for (let t = 15; t < R.time; t += 15) Game.sched.push({ t, kind: 'chaos' });
   if (chal && chal.falling) Game.erode = { acc: 0 };
@@ -160,8 +160,8 @@ Game.showMenu = function (kind) {
 /* ---------- drafts ---------- */
 Game.startDraft = function () {
   const R = Game.rules, race = R.draftKind === 'race', n = race ? 6 : 3;
-  const pool = shuffle(R.pool.slice()); if (!pool.length) return; const items = pool.slice(0, Math.min(n, pool.length));
-  const secret = Math.random() < .55 ? pick(items) : null;
+  const pool = shuffle(R.pool.slice()); if (!pool.length) return; const items = pool.slice(0, Math.min(n, pool.length)); Game.injectRare(items);
+  const withSecret = items.filter(id => ITEMS[id].secret), secret = withSecret.length && Math.random() < .55 ? pick(withSecret) : null;
   const d = { race, items, taken: {}, secret, t0: Game.t, dur: 13, round: ++Game.rounds, plans: [], picked: false, closed: false };
   if (race) {
     for (const b of Game.bots) d.plans.push({ b, at: rnd(.9, 4.4) / b.skill, done: false });
@@ -197,13 +197,13 @@ Game.closeDraft = function () {
 Game.onIslandDestroyed = function (isl) {
   if (Game.state !== 'play' || Game.finished) return;
   const mode = Game.cfg.mode;
-  if (mode === 'mp') { Game.finish(isl === Game.pi, isl === Game.pi ? 'You destroyed your island!' : (isl.owner + ' destroyed their island first'), isl); }
+  if (mode === 'mp') { Game.finish(isl === Game.pi, isl.nuked ? (isl === Game.pi ? '☢ NUKE BOMB — instant victory!' : isl.owner + ' dropped a NUKE and won instantly') : isl === Game.pi ? 'You destroyed your island!' : (isl.owner + ' destroyed their island first'), isl); }
   else if (isl === Game.pi) {
     if (mode === 'endless') { Game.reforming = 1; Game.waveScore += 500; UI.toast('ISLAND DOWN  +500  — it reforms…', 'good'); isl.destroyed = false; return; }
     if (mode === 'free') { isl.destroyed = false; UI.toast('Island destroyed. Press R to rebuild.', 'good'); return; }
     if (Game.chal && Game.chal.falling && isl.stats.weightKilled / isl.totalW < .5) { Game.finish(false, 'The island fell apart on its own'); return; }
-    if (Game.mission && Game.mission.boss) { isl.destroyed = false; return; }
-    Game.finish(true, 'Island destroyed');
+    if (Game.mission && Game.mission.boss && !isl.nuked) { isl.destroyed = false; return; }
+    Game.finish(true, isl.nuked ? '☢ NUKE BOMB — instant victory!' : 'Island destroyed');
   }
 };
 Game.finish = function (win, reason, winnerIsl) {

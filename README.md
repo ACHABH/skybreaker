@@ -19,10 +19,13 @@ Settings has Graphics (Performance/Quality) and Touch Controls (Auto / Always on
 Left stick move · right stick look · RT fire · A jump · B dash · X grapple · Y secret power · LB/RB previous/next slot · LT or D-pad up climb · Select/View switch POV · Start pause.
 Menus: stick or D-pad to move, A to select, B to go back. Item draft: A/B/X/Y or D-pad up/down to pick.
 
+## Rare drops (item drops in Multiplayer, Solo, Campaign and Endless)
+Each item drop has a 1% chance to include the **Nuke Bomb** (☢ — arm it, 2 seconds later the whole island is wiped out: instant win; rivals can grab it too in a race draft) and a 5% chance to include the **Kamehameha** (🔵 — hold fire to charge, release for a huge energy beam; second strongest weapon). Free Break gives you both to play with. Rates live in `RARE` at the top of `src/65_epic.js`.
+
 ## Modes
 Multiplayer match (you vs 5 AI bots, offline), Solo Break, Campaign (6 chapters + 3 bosses), 7 Challenges, Endless, Free Break.
 
 ## Source
-`src/` holds the modules in load order (10_core, 20_island, 22_gen, 30_player, 40_items, 50_bots, 60_modes, 62_floor, 70_ui, 72_input, 99_main), plus `style.css`.
+`src/` holds the modules in load order (10_core, 20_island, 22_gen, 30_player, 40_items, 50_bots, 60_modes, 62_floor, 65_epic, 70_ui, 72_input, 99_main), plus `style.css`.
 After editing run `./build.sh` to regenerate `index.html`. three.js r128 is bundled in `lib/` (MIT license).
 Progress is stored in your browser's localStorage.

@@ -199,7 +199,7 @@ const UI = {
   /* ---------- draft ---------- */
   showDraft(d) {
     const e = this.el.draft; e.classList.remove('hide'); e.querySelector('.hd span').textContent = 'ITEM DROP #' + d.round; e.querySelector('.hd small').textContent = d.race ? 'FIRST COME, FIRST SERVED' : 'CHOOSE ONE';
-    e.querySelector('.dc').innerHTML = d.items.map((id, i) => { const it = ITEMS[id]; return `<button class="it" style="--c:${it.col}" data-d="${i}"><span class="k">${i + 1}</span><div class="i">${it.icon}</div><div class="n">${it.name}</div><div class="d">${it.desc}</div></button>`; }).join('');
+    e.querySelector('.dc').innerHTML = d.items.map((id, i) => { const it = ITEMS[id]; return `<button class="it${it.rare ? ' rare' : ''}" style="--c:${it.col}" data-d="${i}"><span class="k">${i + 1}</span><div class="i">${it.icon}</div><div class="n">${it.name}</div><div class="d">${it.desc}</div></button>`; }).join('');
     e.querySelectorAll('.it').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); Game.pickDraft(+b.dataset.d); }));
     e.querySelector('.tb i').style.width = '100%';
   },
