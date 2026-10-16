@@ -109,10 +109,11 @@ function updateClouds(t) {
 
 /* ---------- input ---------- */
 const Input = {
-  keys: {}, pressed: {}, mouse: { l: false, r: false }, mpress: { l: false, r: false }, dx: 0, dy: 0, wheel: 0, locked: false, nx: 0, ny: 0, captureWanted: false,
+  keys: {}, pressed: {}, mouse: { l: false, r: false }, mpress: { l: false, r: false }, dx: 0, dy: 0, wheel: 0, locked: false, nx: 0, ny: 0, captureWanted: false, ax: 0, ay: 0, px: 0, py: 0, touch: false, pad: false,
   endFrame() { this.pressed = {}; this.mpress.l = this.mpress.r = false; this.dx = 0; this.dy = 0; this.wheel = 0; }
 };
 window.addEventListener('keydown', e => {
+  Input.pad = false;
   if (e.repeat) { if (Input.captureWanted) e.preventDefault(); return; }
   Input.keys[e.code] = true; Input.pressed[e.code] = true;
   if (Input.captureWanted && ['Space', 'Tab', 'F5', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -131,6 +132,7 @@ window.addEventListener('contextmenu', e => { if (Input.captureWanted) e.prevent
 window.addEventListener('mousemove', e => {
   Input.nx = e.clientX / window.innerWidth * 2 - 1; Input.ny = e.clientY / window.innerHeight * 2 - 1;
   if (Input.locked) { Input.dx += e.movementX || 0; Input.dy += e.movementY || 0; }
+  if (e.movementX || e.movementY) Input.pad = false;
 });
 window.addEventListener('wheel', e => { if (Input.captureWanted) Input.wheel += Math.sign(e.deltaY); }, { passive: true });
 document.addEventListener('pointerlockchange', () => {

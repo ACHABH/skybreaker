@@ -171,7 +171,7 @@ function handPos(out) {
 const _hp = new V3();
 function doDash() {
   if (P.dashCd > 0 || P.stun > 0) return false;
-  const k = Input.keys; let ix = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0), iz = (k.KeyS ? 1 : 0) - (k.KeyW ? 1 : 0);
+  let [ix, iz] = moveAxes(); if (Math.hypot(ix, iz) < .25) { ix = 0; iz = 0; }
   const sy = Math.sin(P.camYaw), cy = Math.cos(P.camYaw);
   // forward=(-sin,-cos), right=(cos,-sin); wish = right*ix + fwd*(-iz)
   let wx = cy * ix + (-sy) * (-iz), wz = -sy * ix + (-cy) * (-iz);
@@ -213,11 +213,12 @@ function ctxFor(who) {
 }
 /* ---------- movement ---------- */
 const cand = [];
+function moveAxes() { const k = Input.keys; return [clamp((k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0) + Input.ax + Input.px, -1, 1), clamp((k.KeyS ? 1 : 0) - (k.KeyW ? 1 : 0) + Input.ay + Input.py, -1, 1)]; }
 function movePlayer(dt) {
   const I = Game.pi, k = Input.keys;
   if (P.stun > 0) P.stun -= dt;
   P.dashCd = Math.max(0, P.dashCd - dt); P.grapCd = Math.max(0, P.grapCd - dt);
-  let ix = P.stun > 0 ? 0 : (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0), iz = P.stun > 0 ? 0 : (k.KeyS ? 1 : 0) - (k.KeyW ? 1 : 0);
+  const [mAx, mAz] = moveAxes(); let ix = P.stun > 0 ? 0 : mAx, iz = P.stun > 0 ? 0 : mAz;
   const sy = Math.sin(P.camYaw), cy = Math.cos(P.camYaw);
   let wx = cy * ix + (-sy) * (-iz), wz = -sy * ix + (-cy) * (-iz); const wl = Math.hypot(wx, wz); if (wl > 1) { wx /= wl; wz /= wl; }
   const moving = wl > .01;
@@ -292,7 +293,7 @@ function updateCamera(dt) {
   P.camYaw -= Input.dx * sens; P.camPitch += Input.dy * sens;
   const ka = ((k.ArrowLeft ? 1 : 0) - (k.ArrowRight ? 1 : 0)) * 2.2 * dt, kb = ((k.ArrowDown ? 1 : 0) - (k.ArrowUp ? 1 : 0)) * 1.6 * dt;
   P.camYaw += ka; P.camPitch += kb;
-  if (!Input.locked && Input.lockFailed) { if (Math.abs(Input.nx) > .72) P.camYaw -= Math.sign(Input.nx) * (Math.abs(Input.nx) - .72) * 5 * dt; if (Math.abs(Input.ny) > .72) P.camPitch += Math.sign(Input.ny) * (Math.abs(Input.ny) - .72) * 3 * dt; }
+  if (!Input.locked && Input.lockFailed && !Input.touch && !Input.pad) { if (Math.abs(Input.nx) > .72) P.camYaw -= Math.sign(Input.nx) * (Math.abs(Input.nx) - .72) * 5 * dt; if (Math.abs(Input.ny) > .72) P.camPitch += Math.sign(Input.ny) * (Math.abs(Input.ny) - .72) * 3 * dt; }
   P.camPitch = P.fp ? clamp(P.camPitch, -1.45, 1.45) : clamp(P.camPitch, -.75, 1.25);
   const cp = Math.cos(P.camPitch), sp = Math.sin(P.camPitch), sy = Math.sin(P.camYaw), cy = Math.cos(P.camYaw);
   const bx = sy * cp, by = sp, bz = cy * cp, rx = cy, rz = -sy;

@@ -12,17 +12,19 @@ function pollDraftKeys() {
   for (let i = 0; i < 6; i++) if (Input.pressed['Digit' + (i + 1)]) Game.pickDraft(i);
 }
 let lastT = performance.now(), fpsAcc = 0, fpsN = 0;
-window.stepGame = function (dt) { pollDraftKeys(); Game.frame(dt); UI.setEnded(Game.state === 'ended'); };
+window.stepGame = function (dt) { Pad.poll(dt); pollDraftKeys(); Game.frame(dt); UI.setEnded(Game.state === 'ended'); };
 function loop(now) {
   requestAnimationFrame(loop);
   let dt = (now - lastT) / 1000; lastT = now; if (!(dt > 0)) dt = .016; dt = Math.min(dt, .05);
   try {
-    if (!window.__manual) { pollDraftKeys(); Game.frame(dt); UI.setEnded(Game.state === 'ended'); }
+    if (!window.__manual) { Pad.poll(dt); Touch.sync(); pollDraftKeys(); Game.frame(dt); UI.setEnded(Game.state === 'ended'); }
   } catch (err) { const m = String(err && err.stack || err).slice(0, 400); if (window.__lastErr !== m) { window.__lastErr = m; console.error(m); } }
   renderer.render(scene, camera);
 }
 function boot() {
-  UI.init();
+  UI.init(); Touch.init(); Quality.apply();
+  document.addEventListener('visibilitychange', () => { if (document.hidden && Game.state === 'play' && !Game.paused) Game.pause(true); });
+  window.addEventListener('gamepadconnected', () => { Input.pad = true; Touch.setTouch(false); });
   Game.showMenu('verdantia'); Game.menuKind = 'title';
   applyTheme('menu');
   requestAnimationFrame(loop);

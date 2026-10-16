@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>SKYBREAK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -180,6 +180,68 @@ h2.sec{font-family:var(--fd);font-weight:400;font-size:clamp(26px,4vw,44px);marg
 .rv img{width:min(240px,100%);aspect-ratio:1;border:3px solid var(--gold);border-radius:4px;transform:rotate(-2deg)}
 .rv p{flex:1 1 220px;margin:0;font-size:15px;line-height:1.45;color:var(--mute)}
 .rv b{color:var(--gold)}
+/* ---------- touch / small screens ---------- */
+html,body{overscroll-behavior:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#c{touch-action:none}
+#scr{touch-action:pan-y;-webkit-overflow-scrolling:touch}
+#hotbar{pointer-events:auto}
+.slot{touch-action:none}
+.padf{outline:3px solid var(--gold)!important;outline-offset:2px;box-shadow:0 0 22px rgba(255,212,90,.5)}
+#touch{position:absolute;inset:0;pointer-events:none;--sr:env(safe-area-inset-right,0px);--sl:env(safe-area-inset-left,0px);--sb:env(safe-area-inset-bottom,0px);--st:env(safe-area-inset-top,0px)}
+#touch>*{touch-action:none}
+#tz-move{position:absolute;left:0;top:24%;width:44%;bottom:0;pointer-events:auto}
+#tz-look{position:absolute;right:0;top:10%;width:56%;bottom:0;pointer-events:auto}
+#joy{position:absolute;left:calc(var(--sl) + 104px);top:calc(100% - var(--sb) - 112px);width:116px;height:116px;margin:-58px 0 0 -58px;border-radius:50%;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.08);pointer-events:none;opacity:.5}
+#joy.on{opacity:1}
+#joy i{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.4);border:2px solid rgba(255,255,255,.7)}
+.tbn{position:absolute;pointer-events:auto;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(14,22,56,.6);color:#fff;font-weight:700;font-size:12px;letter-spacing:.06em;width:58px;height:58px;padding:0;backdrop-filter:blur(2px);-webkit-user-select:none}
+.tbn.down{background:rgba(255,106,61,.8);border-color:#fff}
+#tb-fire{width:88px;height:88px;right:calc(var(--sr) + 22px);bottom:calc(var(--sb) + 26px);font-size:15px;border-color:var(--ember)}
+#tb-jump{width:66px;height:66px;right:calc(var(--sr) + 124px);bottom:calc(var(--sb) + 22px)}
+#tb-dash{right:calc(var(--sr) + 32px);bottom:calc(var(--sb) + 128px)}
+#tb-hook{right:calc(var(--sr) + 112px);bottom:calc(var(--sb) + 104px)}
+#tb-secret{width:66px;height:66px;right:calc(var(--sr) + 196px);bottom:calc(var(--sb) + 62px);color:var(--gold);border-color:var(--gold);animation:glow 1s infinite alternate}
+#tb-climb{left:calc(var(--sl) + 24px);bottom:calc(var(--sb) + 196px)}
+@keyframes glow{from{box-shadow:0 0 6px rgba(255,212,90,.4)}to{box-shadow:0 0 22px rgba(255,212,90,.9)}}
+#tcorner{position:absolute;right:calc(var(--sr) + 10px);top:calc(var(--st) + 10px);display:flex;gap:8px;pointer-events:none}
+#tcorner button{pointer-events:auto;width:42px;height:42px;border-radius:8px;border:1px solid rgba(255,255,255,.4);background:rgba(14,22,56,.6);color:#fff;font-weight:700;font-size:11px;padding:0}
+#rot{display:none;position:fixed;inset:0;z-index:50;background:rgba(5,9,24,.94);color:#fff;text-align:center;align-items:center;justify-content:center;font-family:var(--fd);font-size:26px;line-height:1.4;pointer-events:auto}
+#rot small{font-family:var(--fu);font-size:14px;color:var(--mute)}
+@media (orientation:portrait){body.touch.playing #rot{display:flex}}
+body.touch #hotbar{left:auto;right:calc(env(safe-area-inset-right,0px) + 8px);top:60px;bottom:auto;transform:none;flex-direction:row;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:min(300px,46vw)}
+body.touch .slot{width:44px;height:44px}
+body.touch .slot .i{font-size:20px}
+body.touch .slot.sel{transform:translateY(3px)}
+body.touch #mine .lb{display:none}
+body.touch .slot .nm,body.touch .slot .k{display:none}
+body.touch #draft{bottom:auto;top:58px;width:min(600px,64vw);padding:8px 10px}
+body.touch .it .d{display:none}
+body.touch .it{padding:6px 4px}
+body.touch #hint,body.touch #secbar{display:none}
+body.touch #race{width:150px;padding:6px 8px;top:8px;left:calc(env(safe-area-inset-left,0px) + 8px)}
+body.touch #mine .big{font-size:26px}
+body.touch .rr{font-size:11px;grid-template-columns:40px 1fr 32px;margin:2px 0}
+body.touch #timer{top:6px;padding:3px 14px 4px}
+body.touch #timer .t{font-size:24px}
+body.touch #hearts{top:62px;font-size:22px}
+body.touch #toasts{top:96px}
+body.touch #chain{top:34%;right:70px}
+body.touch #cross{width:18px;height:18px;margin:-9px 0 0 -9px}
+body.touch .box{padding:16px 18px}
+@media (max-height:460px){
+  #tb-fire{width:76px;height:76px}.tbn{width:50px;height:50px;font-size:11px}
+  #tb-jump{width:58px;height:58px;right:calc(var(--sr) + 108px)}
+  #tb-dash{bottom:calc(var(--sb) + 108px)}#tb-hook{right:calc(var(--sr) + 98px);bottom:calc(var(--sb) + 88px)}
+  #tb-secret{right:calc(var(--sr) + 170px);bottom:calc(var(--sb) + 52px)}
+  #joy{top:calc(100% - var(--sb) - 88px);width:100px;height:100px;margin:-50px 0 0 -50px}
+  #tb-climb{bottom:calc(var(--sb) + 150px)}
+  #banner{top:22%}
+  .logo{font-size:clamp(40px,12vh,90px)}
+  .tag{margin:8px 0 14px}
+  .btn{padding:9px 18px;font-size:15px}.menu{gap:7px;display:grid;grid-template-columns:1fr 1fr;width:min(660px,100%)}
+  .tag{display:none}.logo br{display:none}.logo{margin-bottom:10px}
+  h2.sec{font-size:26px}.sub{margin-bottom:10px;font-size:13px}.grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}.card p{display:none}
+}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="ui"></div>
@@ -295,10 +357,11 @@ function updateClouds(t) {
 
 /* ---------- input ---------- */
 const Input = {
-  keys: {}, pressed: {}, mouse: { l: false, r: false }, mpress: { l: false, r: false }, dx: 0, dy: 0, wheel: 0, locked: false, nx: 0, ny: 0, captureWanted: false,
+  keys: {}, pressed: {}, mouse: { l: false, r: false }, mpress: { l: false, r: false }, dx: 0, dy: 0, wheel: 0, locked: false, nx: 0, ny: 0, captureWanted: false, ax: 0, ay: 0, px: 0, py: 0, touch: false, pad: false,
   endFrame() { this.pressed = {}; this.mpress.l = this.mpress.r = false; this.dx = 0; this.dy = 0; this.wheel = 0; }
 };
 window.addEventListener('keydown', e => {
+  Input.pad = false;
   if (e.repeat) { if (Input.captureWanted) e.preventDefault(); return; }
   Input.keys[e.code] = true; Input.pressed[e.code] = true;
   if (Input.captureWanted && ['Space', 'Tab', 'F5', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -317,6 +380,7 @@ window.addEventListener('contextmenu', e => { if (Input.captureWanted) e.prevent
 window.addEventListener('mousemove', e => {
   Input.nx = e.clientX / window.innerWidth * 2 - 1; Input.ny = e.clientY / window.innerHeight * 2 - 1;
   if (Input.locked) { Input.dx += e.movementX || 0; Input.dy += e.movementY || 0; }
+  if (e.movementX || e.movementY) Input.pad = false;
 });
 window.addEventListener('wheel', e => { if (Input.captureWanted) Input.wheel += Math.sign(e.deltaY); }, { passive: true });
 document.addEventListener('pointerlockchange', () => {
@@ -1454,7 +1518,7 @@ function handPos(out) {
 const _hp = new V3();
 function doDash() {
   if (P.dashCd > 0 || P.stun > 0) return false;
-  const k = Input.keys; let ix = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0), iz = (k.KeyS ? 1 : 0) - (k.KeyW ? 1 : 0);
+  let [ix, iz] = moveAxes(); if (Math.hypot(ix, iz) < .25) { ix = 0; iz = 0; }
   const sy = Math.sin(P.camYaw), cy = Math.cos(P.camYaw);
   // forward=(-sin,-cos), right=(cos,-sin); wish = right*ix + fwd*(-iz)
   let wx = cy * ix + (-sy) * (-iz), wz = -sy * ix + (-cy) * (-iz);
@@ -1496,11 +1560,12 @@ function ctxFor(who) {
 }
 /* ---------- movement ---------- */
 const cand = [];
+function moveAxes() { const k = Input.keys; return [clamp((k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0) + Input.ax + Input.px, -1, 1), clamp((k.KeyS ? 1 : 0) - (k.KeyW ? 1 : 0) + Input.ay + Input.py, -1, 1)]; }
 function movePlayer(dt) {
   const I = Game.pi, k = Input.keys;
   if (P.stun > 0) P.stun -= dt;
   P.dashCd = Math.max(0, P.dashCd - dt); P.grapCd = Math.max(0, P.grapCd - dt);
-  let ix = P.stun > 0 ? 0 : (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0), iz = P.stun > 0 ? 0 : (k.KeyS ? 1 : 0) - (k.KeyW ? 1 : 0);
+  const [mAx, mAz] = moveAxes(); let ix = P.stun > 0 ? 0 : mAx, iz = P.stun > 0 ? 0 : mAz;
   const sy = Math.sin(P.camYaw), cy = Math.cos(P.camYaw);
   let wx = cy * ix + (-sy) * (-iz), wz = -sy * ix + (-cy) * (-iz); const wl = Math.hypot(wx, wz); if (wl > 1) { wx /= wl; wz /= wl; }
   const moving = wl > .01;
@@ -1575,7 +1640,7 @@ function updateCamera(dt) {
   P.camYaw -= Input.dx * sens; P.camPitch += Input.dy * sens;
   const ka = ((k.ArrowLeft ? 1 : 0) - (k.ArrowRight ? 1 : 0)) * 2.2 * dt, kb = ((k.ArrowDown ? 1 : 0) - (k.ArrowUp ? 1 : 0)) * 1.6 * dt;
   P.camYaw += ka; P.camPitch += kb;
-  if (!Input.locked && Input.lockFailed) { if (Math.abs(Input.nx) > .72) P.camYaw -= Math.sign(Input.nx) * (Math.abs(Input.nx) - .72) * 5 * dt; if (Math.abs(Input.ny) > .72) P.camPitch += Math.sign(Input.ny) * (Math.abs(Input.ny) - .72) * 3 * dt; }
+  if (!Input.locked && Input.lockFailed && !Input.touch && !Input.pad) { if (Math.abs(Input.nx) > .72) P.camYaw -= Math.sign(Input.nx) * (Math.abs(Input.nx) - .72) * 5 * dt; if (Math.abs(Input.ny) > .72) P.camPitch += Math.sign(Input.ny) * (Math.abs(Input.ny) - .72) * 3 * dt; }
   P.camPitch = P.fp ? clamp(P.camPitch, -1.45, 1.45) : clamp(P.camPitch, -.75, 1.25);
   const cp = Math.cos(P.camPitch), sp = Math.sin(P.camPitch), sy = Math.sin(P.camYaw), cy = Math.cos(P.camYaw);
   const bx = sy * cp, by = sp, bz = cy * cp, rx = cy, rz = -sy;
@@ -2655,6 +2720,7 @@ const UI = {
 <div id="ovl" class="hide"></div>`;
     this.scr = Q('#scr'); this.hudEl = Q('#hud'); this.ovl = Q('#ovl');
     this.el = { mine: Q('#mine .big'), bar: Q('.ibar i'), goal: Q('.ibar u'), rows: Q('#rows'), rhd: Q('#rhd'), rsub: Q('#rsub'), gh: Q('#gh'), sb: Q('#sb'), race: Q('#race'), t: Q('#timer .t'), p: Q('#timer .p'), chain: Q('#chain'), cn: Q('#chain .n'), cl: Q('#chain .l'), hot: Q('#hotbar'), toasts: Q('#toasts'), ban: Q('#banner'), bh: Q('#banner h1'), bp: Q('#banner p'), count: Q('#count'), hint: Q('#hint'), draft: Q('#draft'), sec: Q('#sec'), secbar: Q('#secbar'), cross: Q('#cross'), hearts: Q('#hearts') };
+    Q('#hotbar').addEventListener('pointerdown', e => { const s = e.target.closest('.slot'); if (s && Game.state === 'play' && !Game.paused) { e.preventDefault(); selectSlot(+s.dataset.i); } });
     ui.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) { Snd.init(); UI.act(b.dataset.a, b.dataset.v, b); } });
     ui.addEventListener('mouseover', e => { const b = e.target.closest('[data-isl]'); if (b) UI.preview(b.dataset.isl); });
     ui.addEventListener('input', e => { const b = e.target; if (b.dataset.rng === 'sens') { Save.d.sens = Game.sens = +b.value; Save.save(); } if (b.dataset.rng === 'vol') { Save.d.vol = Snd.vol = +b.value; if (Snd.master) Snd.master.gain.value = Snd.vol; Save.save(); } });
@@ -2712,9 +2778,13 @@ const UI = {
       <b>W A S D</b><span>Move</span><b>Mouse</b><span>Look &amp; aim (arrow keys also turn the camera)</span><b>Space</b><span>Jump (hold while falling to glide a little with Dash)</span><b>Left click</b><span>Use selected tool / item (hold for beams &amp; held items)</span>
       <b>1&ndash;9, 0 / Wheel / Tab</b><span>Select tool or item</span><b>Shift</b><span>Dash</span><b>E</b><span>Grappling hook (aim at any surface)</span><b>Q</b><span>Activate a Secret Power &mdash; some need Hold Q + Right click</span>
       <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>T</b><span>Climb back up to the island if you land on the Unbreakable Layer</span><b>Hearts</b><span>You have 3. Falling off the island's side costs one; at zero you lose. Holes in the ground just drop you onto the layer.</span><b>F5</b><span>Switch between third-person and first-person view</span><b>Esc</b><span>Pause</span></div>
+      <h3 style="margin:20px 0 8px;font-family:var(--fd);font-weight:400;letter-spacing:.04em">Controller</h3><div class="kv"><b>Left stick</b><span>Move</span><b>Right stick</b><span>Look</span><b>RT</b><span>Use tool / item</span><b>A</b><span>Jump</span><b>B</b><span>Dash</span><b>X</b><span>Grappling hook</span><b>Y</b><span>Secret Power (hold)</span><b>LB / RB</b><span>Previous / next tool</span><b>LT or D-pad up</b><span>Climb back up to the island</span><b>A B X Y, D-pad up/down</b><span>Claim item drops 1&ndash;6</span><b>Select / Start</b><span>Switch view / Pause</span><b>Menus</b><span>Stick or D-pad to move, A to select, B to go back</span></div>
+      <h3 style="margin:20px 0 8px;font-family:var(--fd);font-weight:400;letter-spacing:.04em">Touch</h3><div class="kv"><b>Left side</b><span>Drag for the move stick</span><b>Right side</b><span>Drag to look around</span><b>FIRE</b><span>Use tool (drag on it to aim while firing)</span><b>JUMP / DASH / HOOK</b><span>Jump, dash, grappling hook</span><b>SECRET / CLIMB</b><span>Appear when a Secret Power is ready or you stand on the floor</span><b>Tool icons</b><span>Tap the tools on the right edge to switch</span><b>II  POV  [ ]</b><span>Pause, switch view, fullscreen</span></div>
       <p class="sub" style="margin-top:16px">Tip: don't just hit things &mdash; cut the supports. Unsupported structures fall, heavy debris crushes what's below, and long chains win matches. Secret Powers hide inside item drops and last only 5 seconds.</p>${back('title')}`;
     } else if (name === 'settings') {
-      h = `<h2 class="sec">Settings</h2><div class="set"><label>Mouse sensitivity</label><input type="range" min=".3" max="2.5" step=".05" value="${S.sens}" data-rng="sens"><label>Volume</label><input type="range" min="0" max="1" step=".05" value="${S.vol}" data-rng="vol"></div>
+      h = `<h2 class="sec">Settings</h2><div class="set"><label>Look sensitivity</label><input type="range" min=".3" max="2.5" step=".05" value="${S.sens}" data-rng="sens"><label>Volume</label><input type="range" min="0" max="1" step=".05" value="${S.vol}" data-rng="vol"></div>
+      <div class="chips" style="margin-top:20px"><span class="lb">Graphics</span>${[['low', 'Performance'], ['high', 'Quality']].map(([v, n]) => `<button class="chip ${Quality.get() === v ? 'on' : ''}" data-a="gfx" data-v="${v}">${n}</button>`).join('')}</div>
+      <div class="chips"><span class="lb">Touch controls</span>${[['auto', 'Auto'], ['on', 'Always on'], ['off', 'Off']].map(([v, n]) => `<button class="chip ${(S.touch || 'auto') === v ? 'on' : ''}" data-a="tch" data-v="${v}">${n}</button>`).join('')}</div>
       <div class="row" style="margin-top:22px">${this.btn('reset', 'Reset all progress', 'Stars, records and ghosts', 'sm')}</div>${back('title')}`;
     }
     this.scr.innerHTML = h; this.scr.scrollTop = 0;
@@ -2736,12 +2806,17 @@ const UI = {
     if (k === 'unlockall') { Save.d.unlockAll = !Save.d.unlockAll; Save.save(); this.screen('campaign'); return; }
     if (k === 'cos') { const [key, id] = v.split(':'); const list = key === 'body' ? BODIES : key === 'hat' ? HATS : TRAILS; const o = list.find(x => String(x.id) === id); if (o && (Save.d.unlockAll || Save.total() >= o.need)) { Save.d.cos[key] = o.id; Save.save(); } this.screen('locker'); return; }
     if (k === 'reset') { if (el.dataset.sure) { try { localStorage.clear(); } catch (e) { } const cos = { body: 0x4aa8ff, hat: 0xffd45a, trail: 'none' }; Save.d = Object.assign(Save.d, { stars: {}, best: {}, wins: 0, plays: 0, cos, endless: 0, unlockAll: false }); Save.save(); this.screen('settings'); } else { el.dataset.sure = 1; el.querySelector('span').firstChild.textContent = 'Click again to confirm'; } return; }
+    if (k === 'gfx') { Save.d.q = v; Save.save(); Quality.apply(); this.screen('settings'); return; }
+    if (k === 'tch') { Save.d.touch = v; Save.save(); Touch.setTouch(Touch.mode()); this.screen('settings'); return; }
+    if (k === 'fs') { this.fs(); return; }
     if (k === 'resume') { Game.pause(false); return; }
     if (k === 'restart') { this.start(Game.cfg); return; }
     if (k === 'menu') { this.quit(); return; }
     if (k === 'next') { const i = Game.cfg.mission + 1; this.start({ mode: 'campaign', mission: i, island: MISSIONS[i].island }); return; }
   },
-  start(cfg) { this.cfg.island = cfg.island === undefined ? this.cfg.island : (cfg.mode === 'mp' ? cfg.island : this.cfg.island); Game.begin(Object.assign({}, cfg)); },
+  fs() { const d = document, el = d.documentElement; try { if (d.fullscreenElement) d.exitFullscreen(); else if (el.requestFullscreen) { const p = el.requestFullscreen({ navigationUI: 'hide' }); if (p && p.then) p.then(() => { try { screen.orientation.lock('landscape').catch(() => { }); } catch (e) { } }).catch(() => { }); } } catch (e) { } },
+  start(cfg) {
+    if (Input.touch && !document.fullscreenElement) this.fs(); this.cfg.island = cfg.island === undefined ? this.cfg.island : (cfg.mode === 'mp' ? cfg.island : this.cfg.island); Game.begin(Object.assign({}, cfg)); },
   quit() { this.hideOvl(); this.hudEl.classList.add('hide'); Game.showMenu('verdantia'); Game.menuKind = 'verdantia'; this.screen('title'); },
   startGame() {
     this.scr.classList.add('hide'); this.hideOvl(); this.hudEl.classList.remove('hide'); this.hudEl.classList.remove('ended');
@@ -2783,7 +2858,7 @@ const UI = {
     if (sig !== this.hotSig) {
       this.hotSig = sig;
       const keys = '1234567890-='.split('');
-      e.hot.innerHTML = P.slots.map((s, i) => { const d = slotDef(s); return `<div class="slot ${i === P.sel ? 'sel' : ''}" style="${s.kit ? '' : 'border-color:' + (i === P.sel ? '' : d.col + '99')}"><span class="k">${keys[i] || ''}</span><span class="i">${d.icon}</span>${s.uses !== Infinity ? `<span class="u">${s.uses > 99 ? '∞' : Math.ceil(s.uses)}</span>` : ''}<span class="nm">${d.name}</span><span class="cd"></span></div>`; }).join('');
+      e.hot.innerHTML = P.slots.map((s, i) => { const d = slotDef(s); return `<div class="slot ${i === P.sel ? 'sel' : ''}" data-i="${i}" style="${s.kit ? '' : 'border-color:' + (i === P.sel ? '' : d.col + '99')}"><span class="k">${keys[i] || ''}</span><span class="i">${d.icon}</span>${s.uses !== Infinity ? `<span class="u">${s.uses > 99 ? '∞' : Math.ceil(s.uses)}</span>` : ''}<span class="nm">${d.name}</span><span class="cd"></span></div>`; }).join('');
       this.cds = Array.from(e.hot.querySelectorAll('.cd'));
     }
     if (this.cds) P.slots.forEach((s, i) => { const el = this.cds[i]; if (!el) return; const f = clamp((s.cdEnd - Game.t) / (s.cdDur || 1), 0, 1); const v = f > 0 ? (f * 100).toFixed(0) + '%' : '0'; if (el._v !== v) { el.style.height = v; el._v = v; } });
@@ -2833,7 +2908,7 @@ const UI = {
   hideOvl() { this.ovl.classList.add('hide'); this.ovl.innerHTML = ''; },
   pause(on) {
     if (!on) { this.hideOvl(); return; }
-    this.ovl.className = 'ovl'; this.ovl.innerHTML = `<div class="box" style="width:min(420px,100%)"><h1>PAUSED</h1><p class="rs">${Game.cfg && Game.cfg.mode === 'mp' ? 'The match keeps its clock stopped for you only in this offline build.' : 'Take a breath.'}</p><div class="menu" style="width:100%">${this.btn('resume', 'Resume', 'Click to recapture the mouse', 'go')}${this.btn('restart', 'Restart')}${this.btn('menu', 'Quit to menu')}</div></div>`;
+    this.ovl.className = 'ovl'; this.ovl.innerHTML = `<div class="box" style="width:min(420px,100%)"><h1>PAUSED</h1><p class="rs">${Game.cfg && Game.cfg.mode === 'mp' ? 'The match keeps its clock stopped for you only in this offline build.' : 'Take a breath.'}</p><div class="menu" style="width:100%">${this.btn('resume', 'Resume', (Input.touch || Input.pad ? 'Back to the match' : 'Click to recapture the mouse'), 'go')}${this.btn('restart', 'Restart')}${this.btn('fs', 'Fullscreen')}${this.btn('menu', 'Quit to menu')}</div></div>`;
   },
   showResults(r) {
     const stars = r.stars !== null && r.stars !== undefined ? `<div class="stars">${'★'.repeat(r.stars)}<span class="o">${'★'.repeat(3 - r.stars)}</span></div>` : '';
@@ -2853,6 +2928,156 @@ const UI = {
 window.UI = UI;
 
 /* =====================================================================
+   SKYBREAK — touch controls, gamepad support, graphics quality
+   ===================================================================== */
+const Quality = {
+  get() { const q = Save.d.q; return q === 'low' || q === 'high' ? q : (Input.touch ? 'low' : 'high'); },
+  apply() {
+    const low = this.get() === 'low', dpr = window.devicePixelRatio || 1;
+    renderer.setPixelRatio(low ? Math.min(dpr, 1) : Math.min(dpr, 1.75)); sun.castShadow = !low; resize();
+  }
+};
+
+/* ---------- touch ---------- */
+const Touch = {
+  mode() { return Save.d.touch === 'on' ? true : Save.d.touch === 'off' ? false : this.auto; },
+  auto: false, shown: false,
+  setTouch(v) { if (Input.touch === v) return; Input.touch = v; document.body.classList.toggle('touch', v); if (v) Input.pad = false; if (!v) this.releaseAll(); },
+  init() {
+    const ui = Q('#ui'), d = document.createElement('div'); d.id = 'touch'; d.className = 'hide';
+    d.innerHTML = `<div id="tz-move"></div><div id="tz-look"></div><div id="joy"><i></i></div>
+<button class="tbn" id="tb-fire" data-k="fire">FIRE</button><button class="tbn" id="tb-jump" data-k="jump">JUMP</button><button class="tbn" id="tb-dash" data-k="dash">DASH</button><button class="tbn" id="tb-hook" data-k="hook">HOOK</button>
+<button class="tbn hide" id="tb-secret" data-k="secret">SECRET</button><button class="tbn hide" id="tb-climb" data-k="climb">CLIMB</button>
+<div id="tcorner"><button data-k="pause" aria-label="Pause">II</button><button data-k="view" aria-label="Switch view">POV</button><button data-k="fs" aria-label="Fullscreen">[ ]</button></div>`;
+    ui.insertBefore(d, Q('#hud')); this.el = d;
+    const rot = document.createElement('div'); rot.id = 'rot'; rot.innerHTML = '<div>Rotate your device<br><small>SKYBREAK plays in landscape</small></div>'; ui.appendChild(rot);
+    this.auto = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches && navigator.maxTouchPoints > 0);
+    window.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') this.setTouch(this.mode() === false ? false : true); else if (e.pointerType === 'mouse') { if (Save.d.touch !== 'on') this.setTouch(false); Input.pad = false; } }, true);
+    this.setTouch(this.mode());
+    const joy = Q('#joy'), knob = Q('#joy i'), mv = Q('#tz-move'), lk = Q('#tz-look');
+    // floating joystick
+    let mid = null, ox = 0, oy = 0; const R = 56;
+    const upd = e => { const dx = e.clientX - ox, dy = e.clientY - oy, len = Math.hypot(dx, dy) || 1, k = Math.min(1, len / R); const dz = len < 7 ? 0 : 1; Input.ax = dx / len * k * dz; Input.ay = dy / len * k * dz; knob.style.transform = `translate(${dx / len * Math.min(len, R)}px,${dy / len * Math.min(len, R)}px)`; };
+    mv.addEventListener('pointerdown', e => { if (mid !== null) return; e.preventDefault(); mid = e.pointerId; try { mv.setPointerCapture(e.pointerId); } catch (x) { } ox = e.clientX; oy = e.clientY; joy.style.left = ox + 'px'; joy.style.top = oy + 'px'; joy.classList.add('on'); upd(e); });
+    mv.addEventListener('pointermove', e => { if (e.pointerId === mid) { e.preventDefault(); upd(e); } });
+    const endMove = e => { if (e.pointerId !== mid) return; mid = null; Input.ax = Input.ay = 0; joy.classList.remove('on'); joy.style.left = ''; joy.style.top = ''; knob.style.transform = ''; };
+    for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) mv.addEventListener(t, endMove);
+    this.endMove = () => endMove({ pointerId: mid }); this.dbg = () => [mid, ox, oy];
+    // look
+    let lid = null, lx = 0, ly = 0; const K = 1.6;
+    lk.addEventListener('pointerdown', e => { if (lid !== null) return; e.preventDefault(); lid = e.pointerId; try { lk.setPointerCapture(e.pointerId); } catch (x) { } lx = e.clientX; ly = e.clientY; });
+    lk.addEventListener('pointermove', e => { if (e.pointerId !== lid) return; e.preventDefault(); Input.dx += (e.clientX - lx) * K; Input.dy += (e.clientY - ly) * K; lx = e.clientX; ly = e.clientY; });
+    const endLook = e => { if (e.pointerId === lid) lid = null; };
+    for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) lk.addEventListener(t, endLook);
+    // buttons
+    const A = {
+      fire: [() => { Input.mouse.l = true; Input.mpress.l = true; }, () => { Input.mouse.l = false; }],
+      jump: [() => { Input.keys.Space = true; Input.pressed.Space = true; }, () => { Input.keys.Space = false; }],
+      dash: [() => { Input.pressed.ShiftLeft = true; }],
+      hook: [() => { Input.pressed.KeyE = true; }],
+      secret: [() => { Input.keys.KeyQ = true; Input.pressed.KeyQ = true; Input.mouse.r = true; }, () => { Input.keys.KeyQ = false; Input.mouse.r = false; }],
+      climb: [() => { Input.pressed.KeyT = true; }],
+      pause: [() => { if (Game.state === 'play') Game.pause(true); }],
+      view: [() => { if (Game.state === 'play') toggleView(); }],
+      fs: [() => UI.fs()]
+    };
+    this.release = {}; const held = new Map();
+    d.querySelectorAll('[data-k]').forEach(b => {
+      const k = b.dataset.k, a = A[k]; let pid = null;
+      b.addEventListener('pointerdown', e => { if (pid !== null) return; e.preventDefault(); e.stopPropagation(); pid = e.pointerId; try { b.setPointerCapture(e.pointerId); } catch (x) { } b.classList.add('down'); a[0](); if (k === 'fire') { lx = e.clientX; ly = e.clientY; } Snd.init(); });
+      b.addEventListener('pointermove', e => { if (k === 'fire' && e.pointerId === pid) { Input.dx += (e.clientX - lx) * K; Input.dy += (e.clientY - ly) * K; lx = e.clientX; ly = e.clientY; } });
+      const up = e => { if (e.pointerId !== pid) return; pid = null; b.classList.remove('down'); if (a[1]) a[1](); };
+      for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(t, up);
+      this.release[k] = () => { if (pid !== null) { pid = null; b.classList.remove('down'); if (a[1]) a[1](); } };
+    });
+    d.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('gesturestart', e => e.preventDefault());
+  },
+  releaseAll() { if (this.release) for (const k in this.release) this.release[k](); if (this.endMove) this.endMove(); Input.ax = Input.ay = 0; },
+  sync() {
+    if (!this.el) return;
+    const st = Game.state, on = Input.touch && (st === 'play' || st === 'intro') && !Game.paused;
+    if (on !== this.shown) { this.shown = on; this.el.classList.toggle('hide', !on); if (!on) this.releaseAll(); }
+    document.body.classList.toggle('playing', Input.touch && (st === 'play' || st === 'intro'));
+    if (on) { Q('#tb-secret').classList.toggle('hide', !P.secret); Q('#tb-climb').classList.toggle('hide', !P.onFloor); }
+  }
+};
+
+/* ---------- gamepad ---------- */
+const Pad = {
+  prev: [], navT: 0, focus: null, connected: false,
+  clearFocus() { if (this.focus) this.focus.classList.remove('padf'); this.focus = null; },
+  items() {
+    return Array.from(document.querySelectorAll('#scr:not(.hide) [data-a], #scr:not(.hide) input[type=range], #ovl:not(.hide) [data-a]')).filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; });
+  },
+  setFocus(el) {
+    if (this.focus) this.focus.classList.remove('padf'); this.focus = el; if (!el) return; el.classList.add('padf');
+    try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) { }
+    el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+  },
+  move(dx, dy) {
+    const list = this.items(); if (!list.length) return;
+    if (!this.focus || !document.contains(this.focus) || !list.includes(this.focus)) { this.setFocus(list.find(e => e.classList.contains('go')) || list[0]); return; }
+    if (this.focus.type === 'range' && dx) { const r = this.focus, st = (+r.step || 1) * 2; r.value = clamp(+r.value + dx * st, +r.min, +r.max); r.dispatchEvent(new Event('input', { bubbles: true })); return; }
+    const a = this.focus.getBoundingClientRect(), ax = a.x + a.width / 2, ay = a.y + a.height / 2; let best = null, bs = 1e9;
+    for (const el of list) {
+      if (el === this.focus) continue; const r = el.getBoundingClientRect(), cx = r.x + r.width / 2, cy = r.y + r.height / 2, vx = cx - ax, vy = cy - ay;
+      const along = vx * dx + vy * dy, perp = Math.abs(vx * dy - vy * dx); if (along <= 4) continue;
+      const sc = along + perp * 2.2; if (sc < bs) { bs = sc; best = el; }
+    }
+    if (best) this.setFocus(best);
+  },
+  poll(dt) {
+    const gps = navigator.getGamepads ? navigator.getGamepads() : []; let gp = null; for (const g of gps) if (g && g.connected) { gp = g; break; }
+    if (!gp) { this.connected = false; Input.px = Input.py = 0; if (this.focus) this.clearFocus(); return; }
+    this.connected = true;
+    const b = i => { const x = gp.buttons[i]; return !!x && (x.pressed || x.value > .5); }, dn = i => b(i) && !this.prev[i], up = i => !b(i) && this.prev[i];
+    const dz = v => { v = v || 0; return Math.abs(v) < .18 ? 0 : (v - Math.sign(v) * .18) / .82; };
+    const lx = dz(gp.axes[0]), ly = dz(gp.axes[1]), rx = dz(gp.axes[2]), ry = dz(gp.axes[3]);
+    let any = lx || ly || rx || ry; for (let i = 0; i < gp.buttons.length; i++) if (b(i)) any = true;
+    if (any) { if (!Input.pad) { Input.pad = true; Touch.setTouch(false); } Snd.init(); }
+    const st = Game.state, play = (st === 'play' || st === 'intro') && !Game.paused;
+    const ovlOpen = !UI.ovl.classList.contains('hide');
+    const menuLike = st === 'menu' || Game.paused || (st === 'ended' && ovlOpen);
+    if (menuLike) {
+      Input.px = Input.py = 0;
+      this.navT -= dt; let dx = 0, dy = 0;
+      if (dn(12)) dy = -1; else if (dn(13)) dy = 1; else if (dn(14)) dx = -1; else if (dn(15)) dx = 1;
+      else if (this.navT <= 0) { if (Math.abs(gp.axes[1]) > .6) dy = Math.sign(gp.axes[1]); else if (Math.abs(gp.axes[0]) > .6) dx = Math.sign(gp.axes[0]); if (dx || dy) this.navT = .22; }
+      if (dx || dy) { this.move(dx, dy); if (dn(12) || dn(13) || dn(14) || dn(15)) this.navT = .3; }
+      else if (!this.focus && (dn(0) || any)) this.move(0, 1);
+      if (dn(0) && this.focus && document.contains(this.focus)) { const f = this.focus; if (f.type !== 'range') { f.click(); Snd.play('ui', .4); } }
+      if (dn(1)) { const back = Q('#scr:not(.hide) .back .btn'); if (back) back.click(); else if (Game.paused) Game.pause(false); }
+      if (dn(9) && Game.paused) Game.pause(false);
+    } else {
+      if (this.focus) this.clearFocus();
+      if (play) {
+        Input.px = lx; Input.py = ly;
+        const curve = v => v * Math.abs(v) * 1.15 + v * .15;
+        Input.dx += curve(rx) * 1150 * dt; Input.dy += curve(ry) * 800 * dt;
+        const draft = Game.draftKeys && Game.draft;
+        if (draft) { for (let i = 0; i < 4; i++) if (dn(i)) Game.pickDraft(i); if (dn(12)) Game.pickDraft(4); if (dn(13)) Game.pickDraft(5); }
+        else {
+          if (dn(0)) { Input.keys.Space = true; Input.pressed.Space = true; } if (up(0)) Input.keys.Space = false;
+          if (dn(1)) Input.pressed.ShiftLeft = true;
+          if (dn(2)) Input.pressed.KeyE = true;
+          if (dn(3)) { Input.keys.KeyQ = true; Input.pressed.KeyQ = true; Input.mouse.r = true; } if (up(3)) { Input.keys.KeyQ = false; Input.mouse.r = false; }
+          if (dn(12)) { Input.pressed.KeyT = true; }
+        }
+        const fire = b(7) || (gp.buttons[7] && gp.buttons[7].value > .4);
+        if (fire && !this.prev[7]) { Input.mouse.l = true; Input.mpress.l = true; } if (!fire && this.prev[7]) Input.mouse.l = false;
+        if (dn(5) || (!draft && dn(15))) selectSlot((P.sel + 1) % P.slots.length);
+        if (dn(4) || (!draft && dn(14))) selectSlot((P.sel + P.slots.length - 1) % P.slots.length);
+        if (dn(6)) Input.pressed.KeyT = true;
+        if (dn(8) && st === 'play') toggleView();
+        if (dn(9) && st === 'play') Game.pause(true);
+      } else Input.px = Input.py = 0;
+    }
+    this.prev = gp.buttons.map((x, i) => (x.pressed || x.value > .5) || (i === 7 && x.value > .4));
+  }
+};
+
+/* =====================================================================
    SKYBREAK — boot + main loop
    ===================================================================== */
 window.SBT = { buildIsland, camera, renderer, scene, applyTheme, Game, P, Save, UI, ITEMS, Input };
@@ -2866,17 +3091,19 @@ function pollDraftKeys() {
   for (let i = 0; i < 6; i++) if (Input.pressed['Digit' + (i + 1)]) Game.pickDraft(i);
 }
 let lastT = performance.now(), fpsAcc = 0, fpsN = 0;
-window.stepGame = function (dt) { pollDraftKeys(); Game.frame(dt); UI.setEnded(Game.state === 'ended'); };
+window.stepGame = function (dt) { Pad.poll(dt); pollDraftKeys(); Game.frame(dt); UI.setEnded(Game.state === 'ended'); };
 function loop(now) {
   requestAnimationFrame(loop);
   let dt = (now - lastT) / 1000; lastT = now; if (!(dt > 0)) dt = .016; dt = Math.min(dt, .05);
   try {
-    if (!window.__manual) { pollDraftKeys(); Game.frame(dt); UI.setEnded(Game.state === 'ended'); }
+    if (!window.__manual) { Pad.poll(dt); Touch.sync(); pollDraftKeys(); Game.frame(dt); UI.setEnded(Game.state === 'ended'); }
   } catch (err) { const m = String(err && err.stack || err).slice(0, 400); if (window.__lastErr !== m) { window.__lastErr = m; console.error(m); } }
   renderer.render(scene, camera);
 }
 function boot() {
-  UI.init();
+  UI.init(); Touch.init(); Quality.apply();
+  document.addEventListener('visibilitychange', () => { if (document.hidden && Game.state === 'play' && !Game.paused) Game.pause(true); });
+  window.addEventListener('gamepadconnected', () => { Input.pad = true; Touch.setTouch(false); });
   Game.showMenu('verdantia'); Game.menuKind = 'title';
   applyTheme('menu');
   requestAnimationFrame(loop);

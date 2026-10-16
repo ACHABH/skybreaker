@@ -28,6 +28,7 @@ const UI = {
 <div id="ovl" class="hide"></div>`;
     this.scr = Q('#scr'); this.hudEl = Q('#hud'); this.ovl = Q('#ovl');
     this.el = { mine: Q('#mine .big'), bar: Q('.ibar i'), goal: Q('.ibar u'), rows: Q('#rows'), rhd: Q('#rhd'), rsub: Q('#rsub'), gh: Q('#gh'), sb: Q('#sb'), race: Q('#race'), t: Q('#timer .t'), p: Q('#timer .p'), chain: Q('#chain'), cn: Q('#chain .n'), cl: Q('#chain .l'), hot: Q('#hotbar'), toasts: Q('#toasts'), ban: Q('#banner'), bh: Q('#banner h1'), bp: Q('#banner p'), count: Q('#count'), hint: Q('#hint'), draft: Q('#draft'), sec: Q('#sec'), secbar: Q('#secbar'), cross: Q('#cross'), hearts: Q('#hearts') };
+    Q('#hotbar').addEventListener('pointerdown', e => { const s = e.target.closest('.slot'); if (s && Game.state === 'play' && !Game.paused) { e.preventDefault(); selectSlot(+s.dataset.i); } });
     ui.addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (b) { Snd.init(); UI.act(b.dataset.a, b.dataset.v, b); } });
     ui.addEventListener('mouseover', e => { const b = e.target.closest('[data-isl]'); if (b) UI.preview(b.dataset.isl); });
     ui.addEventListener('input', e => { const b = e.target; if (b.dataset.rng === 'sens') { Save.d.sens = Game.sens = +b.value; Save.save(); } if (b.dataset.rng === 'vol') { Save.d.vol = Snd.vol = +b.value; if (Snd.master) Snd.master.gain.value = Snd.vol; Save.save(); } });
@@ -85,9 +86,13 @@ const UI = {
       <b>W A S D</b><span>Move</span><b>Mouse</b><span>Look &amp; aim (arrow keys also turn the camera)</span><b>Space</b><span>Jump (hold while falling to glide a little with Dash)</span><b>Left click</b><span>Use selected tool / item (hold for beams &amp; held items)</span>
       <b>1&ndash;9, 0 / Wheel / Tab</b><span>Select tool or item</span><b>Shift</b><span>Dash</span><b>E</b><span>Grappling hook (aim at any surface)</span><b>Q</b><span>Activate a Secret Power &mdash; some need Hold Q + Right click</span>
       <b>1&ndash;6</b><span>Claim an item during a drop (first come, first served in multiplayer)</span><b>R</b><span>Free Break: rebuild the island</span><b>T</b><span>Climb back up to the island if you land on the Unbreakable Layer</span><b>Hearts</b><span>You have 3. Falling off the island's side costs one; at zero you lose. Holes in the ground just drop you onto the layer.</span><b>F5</b><span>Switch between third-person and first-person view</span><b>Esc</b><span>Pause</span></div>
+      <h3 style="margin:20px 0 8px;font-family:var(--fd);font-weight:400;letter-spacing:.04em">Controller</h3><div class="kv"><b>Left stick</b><span>Move</span><b>Right stick</b><span>Look</span><b>RT</b><span>Use tool / item</span><b>A</b><span>Jump</span><b>B</b><span>Dash</span><b>X</b><span>Grappling hook</span><b>Y</b><span>Secret Power (hold)</span><b>LB / RB</b><span>Previous / next tool</span><b>LT or D-pad up</b><span>Climb back up to the island</span><b>A B X Y, D-pad up/down</b><span>Claim item drops 1&ndash;6</span><b>Select / Start</b><span>Switch view / Pause</span><b>Menus</b><span>Stick or D-pad to move, A to select, B to go back</span></div>
+      <h3 style="margin:20px 0 8px;font-family:var(--fd);font-weight:400;letter-spacing:.04em">Touch</h3><div class="kv"><b>Left side</b><span>Drag for the move stick</span><b>Right side</b><span>Drag to look around</span><b>FIRE</b><span>Use tool (drag on it to aim while firing)</span><b>JUMP / DASH / HOOK</b><span>Jump, dash, grappling hook</span><b>SECRET / CLIMB</b><span>Appear when a Secret Power is ready or you stand on the floor</span><b>Tool icons</b><span>Tap the tools on the right edge to switch</span><b>II  POV  [ ]</b><span>Pause, switch view, fullscreen</span></div>
       <p class="sub" style="margin-top:16px">Tip: don't just hit things &mdash; cut the supports. Unsupported structures fall, heavy debris crushes what's below, and long chains win matches. Secret Powers hide inside item drops and last only 5 seconds.</p>${back('title')}`;
     } else if (name === 'settings') {
-      h = `<h2 class="sec">Settings</h2><div class="set"><label>Mouse sensitivity</label><input type="range" min=".3" max="2.5" step=".05" value="${S.sens}" data-rng="sens"><label>Volume</label><input type="range" min="0" max="1" step=".05" value="${S.vol}" data-rng="vol"></div>
+      h = `<h2 class="sec">Settings</h2><div class="set"><label>Look sensitivity</label><input type="range" min=".3" max="2.5" step=".05" value="${S.sens}" data-rng="sens"><label>Volume</label><input type="range" min="0" max="1" step=".05" value="${S.vol}" data-rng="vol"></div>
+      <div class="chips" style="margin-top:20px"><span class="lb">Graphics</span>${[['low', 'Performance'], ['high', 'Quality']].map(([v, n]) => `<button class="chip ${Quality.get() === v ? 'on' : ''}" data-a="gfx" data-v="${v}">${n}</button>`).join('')}</div>
+      <div class="chips"><span class="lb">Touch controls</span>${[['auto', 'Auto'], ['on', 'Always on'], ['off', 'Off']].map(([v, n]) => `<button class="chip ${(S.touch || 'auto') === v ? 'on' : ''}" data-a="tch" data-v="${v}">${n}</button>`).join('')}</div>
       <div class="row" style="margin-top:22px">${this.btn('reset', 'Reset all progress', 'Stars, records and ghosts', 'sm')}</div>${back('title')}`;
     }
     this.scr.innerHTML = h; this.scr.scrollTop = 0;
@@ -109,12 +114,17 @@ const UI = {
     if (k === 'unlockall') { Save.d.unlockAll = !Save.d.unlockAll; Save.save(); this.screen('campaign'); return; }
     if (k === 'cos') { const [key, id] = v.split(':'); const list = key === 'body' ? BODIES : key === 'hat' ? HATS : TRAILS; const o = list.find(x => String(x.id) === id); if (o && (Save.d.unlockAll || Save.total() >= o.need)) { Save.d.cos[key] = o.id; Save.save(); } this.screen('locker'); return; }
     if (k === 'reset') { if (el.dataset.sure) { try { localStorage.clear(); } catch (e) { } const cos = { body: 0x4aa8ff, hat: 0xffd45a, trail: 'none' }; Save.d = Object.assign(Save.d, { stars: {}, best: {}, wins: 0, plays: 0, cos, endless: 0, unlockAll: false }); Save.save(); this.screen('settings'); } else { el.dataset.sure = 1; el.querySelector('span').firstChild.textContent = 'Click again to confirm'; } return; }
+    if (k === 'gfx') { Save.d.q = v; Save.save(); Quality.apply(); this.screen('settings'); return; }
+    if (k === 'tch') { Save.d.touch = v; Save.save(); Touch.setTouch(Touch.mode()); this.screen('settings'); return; }
+    if (k === 'fs') { this.fs(); return; }
     if (k === 'resume') { Game.pause(false); return; }
     if (k === 'restart') { this.start(Game.cfg); return; }
     if (k === 'menu') { this.quit(); return; }
     if (k === 'next') { const i = Game.cfg.mission + 1; this.start({ mode: 'campaign', mission: i, island: MISSIONS[i].island }); return; }
   },
-  start(cfg) { this.cfg.island = cfg.island === undefined ? this.cfg.island : (cfg.mode === 'mp' ? cfg.island : this.cfg.island); Game.begin(Object.assign({}, cfg)); },
+  fs() { const d = document, el = d.documentElement; try { if (d.fullscreenElement) d.exitFullscreen(); else if (el.requestFullscreen) { const p = el.requestFullscreen({ navigationUI: 'hide' }); if (p && p.then) p.then(() => { try { screen.orientation.lock('landscape').catch(() => { }); } catch (e) { } }).catch(() => { }); } } catch (e) { } },
+  start(cfg) {
+    if (Input.touch && !document.fullscreenElement) this.fs(); this.cfg.island = cfg.island === undefined ? this.cfg.island : (cfg.mode === 'mp' ? cfg.island : this.cfg.island); Game.begin(Object.assign({}, cfg)); },
   quit() { this.hideOvl(); this.hudEl.classList.add('hide'); Game.showMenu('verdantia'); Game.menuKind = 'verdantia'; this.screen('title'); },
   startGame() {
     this.scr.classList.add('hide'); this.hideOvl(); this.hudEl.classList.remove('hide'); this.hudEl.classList.remove('ended');
@@ -156,7 +166,7 @@ const UI = {
     if (sig !== this.hotSig) {
       this.hotSig = sig;
       const keys = '1234567890-='.split('');
-      e.hot.innerHTML = P.slots.map((s, i) => { const d = slotDef(s); return `<div class="slot ${i === P.sel ? 'sel' : ''}" style="${s.kit ? '' : 'border-color:' + (i === P.sel ? '' : d.col + '99')}"><span class="k">${keys[i] || ''}</span><span class="i">${d.icon}</span>${s.uses !== Infinity ? `<span class="u">${s.uses > 99 ? '∞' : Math.ceil(s.uses)}</span>` : ''}<span class="nm">${d.name}</span><span class="cd"></span></div>`; }).join('');
+      e.hot.innerHTML = P.slots.map((s, i) => { const d = slotDef(s); return `<div class="slot ${i === P.sel ? 'sel' : ''}" data-i="${i}" style="${s.kit ? '' : 'border-color:' + (i === P.sel ? '' : d.col + '99')}"><span class="k">${keys[i] || ''}</span><span class="i">${d.icon}</span>${s.uses !== Infinity ? `<span class="u">${s.uses > 99 ? '∞' : Math.ceil(s.uses)}</span>` : ''}<span class="nm">${d.name}</span><span class="cd"></span></div>`; }).join('');
       this.cds = Array.from(e.hot.querySelectorAll('.cd'));
     }
     if (this.cds) P.slots.forEach((s, i) => { const el = this.cds[i]; if (!el) return; const f = clamp((s.cdEnd - Game.t) / (s.cdDur || 1), 0, 1); const v = f > 0 ? (f * 100).toFixed(0) + '%' : '0'; if (el._v !== v) { el.style.height = v; el._v = v; } });
@@ -206,7 +216,7 @@ const UI = {
   hideOvl() { this.ovl.classList.add('hide'); this.ovl.innerHTML = ''; },
   pause(on) {
     if (!on) { this.hideOvl(); return; }
-    this.ovl.className = 'ovl'; this.ovl.innerHTML = `<div class="box" style="width:min(420px,100%)"><h1>PAUSED</h1><p class="rs">${Game.cfg && Game.cfg.mode === 'mp' ? 'The match keeps its clock stopped for you only in this offline build.' : 'Take a breath.'}</p><div class="menu" style="width:100%">${this.btn('resume', 'Resume', 'Click to recapture the mouse', 'go')}${this.btn('restart', 'Restart')}${this.btn('menu', 'Quit to menu')}</div></div>`;
+    this.ovl.className = 'ovl'; this.ovl.innerHTML = `<div class="box" style="width:min(420px,100%)"><h1>PAUSED</h1><p class="rs">${Game.cfg && Game.cfg.mode === 'mp' ? 'The match keeps its clock stopped for you only in this offline build.' : 'Take a breath.'}</p><div class="menu" style="width:100%">${this.btn('resume', 'Resume', (Input.touch || Input.pad ? 'Back to the match' : 'Click to recapture the mouse'), 'go')}${this.btn('restart', 'Restart')}${this.btn('fs', 'Fullscreen')}${this.btn('menu', 'Quit to menu')}</div></div>`;
   },
   showResults(r) {
     const stars = r.stars !== null && r.stars !== undefined ? `<div class="stars">${'★'.repeat(r.stars)}<span class="o">${'★'.repeat(3 - r.stars)}</span></div>` : '';
