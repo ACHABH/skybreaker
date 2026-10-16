@@ -116,7 +116,7 @@ Game.begin = function (cfg) {
   }
   if (mission && mission.boss) Game.initBoss(mission.boss);
   Game.t0real = performance.now(); Game.state = 'intro'; Game.introT = 0; Input.captureWanted = true; Input.lockFailed = false;
-  if (canvas.requestPointerLock) { try { const pr = canvas.requestPointerLock(); if (pr && pr.catch) pr.catch(() => { }); } catch (e) { } }
+  lockPointer();
   Game.hint = mode === 'mp' ? 'Destroy your island before anyone else does' : (mission ? mission.obj : mode === 'free' ? 'Sandbox: unlimited everything. R = reset island.' : mode === 'endless' ? 'Survive. Three falls and the run ends.' : 'Destroy 100% of the island');
   if (window.UI) UI.startGame();
 };
@@ -375,7 +375,7 @@ Game.timeUp = function () {
 };
 Game.pause = function (on) {
   if (Game.state !== 'play' && Game.state !== 'intro') return;
-  Game.paused = on; if (window.UI) UI.pause(on); if (on) { Input.mouse.l = Input.mouse.r = false; Input.captureWanted = false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch (e) { } } else { Input.captureWanted = true; if (canvas.requestPointerLock) try { const pr = canvas.requestPointerLock(); if (pr && pr.catch) pr.catch(() => { }); } catch (e) { } }
+  Game.paused = on; if (window.UI) UI.pause(on); if (on) { Input.mouse.l = Input.mouse.r = false; Input.captureWanted = false; if (document.exitPointerLock) try { document.exitPointerLock(); } catch (e) { } } else { Input.captureWanted = true; lockPointer(); }
 };
 Game.chaosSwap = function () {
   P.slots = P.slots.filter(s => s.kit); const ids = shuffle(ITEM_ORDER.slice()).slice(0, 3); for (const id of ids) giveItem(id, 3); P.sel = 5; UI.banner('EQUIPMENT SWAP', ids.map(i => ITEMS[i].name).join(' · '), 1800); Snd.play('drop', .7);

@@ -13,7 +13,7 @@ const Quality = {
 const Touch = {
   mode() { return Save.d.touch === 'on' ? true : Save.d.touch === 'off' ? false : this.auto; },
   auto: false, shown: false,
-  setTouch(v) { if (Input.touch === v) return; Input.touch = v; document.body.classList.toggle('touch', v); if (v) Input.pad = false; if (!v) this.releaseAll(); },
+  setTouch(v) { if (Input.touch === v) return; Input.touch = v; document.body.classList.toggle('touch', v); if (v) unlockPointer(); if (v) Input.pad = false; if (!v) this.releaseAll(); },
   init() {
     const ui = Q('#ui'), d = document.createElement('div'); d.id = 'touch'; d.className = 'hide';
     d.innerHTML = `<div id="tz-move"></div><div id="tz-look"></div><div id="joy"><i></i></div>
@@ -23,23 +23,42 @@ const Touch = {
     ui.insertBefore(d, Q('#hud')); this.el = d;
     const rot = document.createElement('div'); rot.id = 'rot'; rot.innerHTML = '<div>Rotate your device<br><small>SKYBREAK plays in landscape</small></div>'; ui.appendChild(rot);
     this.auto = !!(window.matchMedia && matchMedia('(pointer:coarse)').matches && navigator.maxTouchPoints > 0);
+    window.addEventListener('touchstart', () => this.setTouch(this.mode() === false ? false : true), { capture: true, passive: true });
     window.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') this.setTouch(this.mode() === false ? false : true); else if (e.pointerType === 'mouse') { if (Save.d.touch !== 'on') this.setTouch(false); Input.pad = false; } }, true);
     this.setTouch(this.mode());
     const joy = Q('#joy'), knob = Q('#joy i'), mv = Q('#tz-move'), lk = Q('#tz-look');
+    /* Gesture adapter. Real Touch Events are the primary source on touch devices: some browsers/emulators
+       report clientX/clientY = 0 on touch *pointer* events (the stick then jumped to the screen corner), while
+       Touch Events always carry the right coordinates. Mouse/pen (and touch without Touch Events) use Pointer Events. */
+    const hasTE = 'ontouchstart' in window;
+    const bind = (el, h) => {
+      if (hasTE) {
+        el.addEventListener('touchstart', e => { e.preventDefault(); for (const t of e.changedTouches) h.down('t' + t.identifier, t.clientX, t.clientY); }, { passive: false });
+        el.addEventListener('touchmove', e => { e.preventDefault(); for (const t of e.changedTouches) h.move('t' + t.identifier, t.clientX, t.clientY); }, { passive: false });
+        const end = e => { for (const t of e.changedTouches) h.up('t' + t.identifier); };
+        el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+      }
+      const ok = e => !(e.pointerType === 'touch' && hasTE) && !(e.pointerType === 'touch' && !e.clientX && !e.clientY);
+      el.addEventListener('pointerdown', e => { if (!ok(e)) return; e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (x) { } h.down('p' + e.pointerId, e.clientX, e.clientY); });
+      el.addEventListener('pointermove', e => { if (!ok(e)) return; h.move('p' + e.pointerId, e.clientX, e.clientY); });
+      for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) el.addEventListener(t, e => { if (!ok(e)) return; h.up('p' + e.pointerId); });
+    };
     // floating joystick
     let mid = null, ox = 0, oy = 0; const R = 56;
-    const upd = e => { const dx = e.clientX - ox, dy = e.clientY - oy, len = Math.hypot(dx, dy) || 1, k = Math.min(1, len / R); const dz = len < 7 ? 0 : 1; Input.ax = dx / len * k * dz; Input.ay = dy / len * k * dz; knob.style.transform = `translate(${dx / len * Math.min(len, R)}px,${dy / len * Math.min(len, R)}px)`; };
-    mv.addEventListener('pointerdown', e => { if (mid !== null) return; e.preventDefault(); mid = e.pointerId; try { mv.setPointerCapture(e.pointerId); } catch (x) { } ox = e.clientX; oy = e.clientY; joy.style.left = ox + 'px'; joy.style.top = oy + 'px'; joy.classList.add('on'); upd(e); });
-    mv.addEventListener('pointermove', e => { if (e.pointerId === mid) { e.preventDefault(); upd(e); } });
-    const endMove = e => { if (e.pointerId !== mid) return; mid = null; Input.ax = Input.ay = 0; joy.classList.remove('on'); joy.style.left = ''; joy.style.top = ''; knob.style.transform = ''; };
-    for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) mv.addEventListener(t, endMove);
-    this.endMove = () => endMove({ pointerId: mid }); this.dbg = () => [mid, ox, oy];
+    const upd = (x, y) => { const dx = x - ox, dy = y - oy, len = Math.hypot(dx, dy) || 1, k = Math.min(1, len / R); const dz = len < 7 ? 0 : 1; Input.ax = dx / len * k * dz; Input.ay = dy / len * k * dz; knob.style.transform = `translate(${dx / len * Math.min(len, R)}px,${dy / len * Math.min(len, R)}px)`; };
+    const endMove = id => { if (id !== mid) return; mid = null; Input.ax = Input.ay = 0; joy.classList.remove('on'); joy.style.left = ''; joy.style.top = ''; knob.style.transform = ''; };
+    bind(mv, {
+      down: (id, x, y) => { if (mid !== null) return; mid = id; ox = x; oy = y; const r = this.el.getBoundingClientRect(); joy.style.left = (x - r.left) + 'px'; joy.style.top = (y - r.top) + 'px'; joy.classList.add('on'); upd(x, y); },
+      move: (id, x, y) => { if (id === mid) upd(x, y); }, up: endMove
+    });
+    this.endMove = () => endMove(mid); this.dbg = () => [mid, ox, oy];
     // look
     let lid = null, lx = 0, ly = 0; const K = 1.6;
-    lk.addEventListener('pointerdown', e => { if (lid !== null) return; e.preventDefault(); lid = e.pointerId; try { lk.setPointerCapture(e.pointerId); } catch (x) { } lx = e.clientX; ly = e.clientY; });
-    lk.addEventListener('pointermove', e => { if (e.pointerId !== lid) return; e.preventDefault(); Input.dx += (e.clientX - lx) * K; Input.dy += (e.clientY - ly) * K; lx = e.clientX; ly = e.clientY; });
-    const endLook = e => { if (e.pointerId === lid) lid = null; };
-    for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) lk.addEventListener(t, endLook);
+    bind(lk, {
+      down: (id, x, y) => { if (lid !== null) return; lid = id; lx = x; ly = y; },
+      move: (id, x, y) => { if (id !== lid) return; Input.dx += (x - lx) * K; Input.dy += (y - ly) * K; lx = x; ly = y; },
+      up: id => { if (id === lid) lid = null; }
+    });
     // buttons
     const A = {
       fire: [() => { Input.mouse.l = true; Input.mpress.l = true; }, () => { Input.mouse.l = false; }],
@@ -52,13 +71,14 @@ const Touch = {
       view: [() => { if (Game.state === 'play') toggleView(); }],
       fs: [() => UI.fs()]
     };
-    this.release = {}; const held = new Map();
+    this.release = {};
     d.querySelectorAll('[data-k]').forEach(b => {
-      const k = b.dataset.k, a = A[k]; let pid = null;
-      b.addEventListener('pointerdown', e => { if (pid !== null) return; e.preventDefault(); e.stopPropagation(); pid = e.pointerId; try { b.setPointerCapture(e.pointerId); } catch (x) { } b.classList.add('down'); a[0](); if (k === 'fire') { lx = e.clientX; ly = e.clientY; } Snd.init(); });
-      b.addEventListener('pointermove', e => { if (k === 'fire' && e.pointerId === pid) { Input.dx += (e.clientX - lx) * K; Input.dy += (e.clientY - ly) * K; lx = e.clientX; ly = e.clientY; } });
-      const up = e => { if (e.pointerId !== pid) return; pid = null; b.classList.remove('down'); if (a[1]) a[1](); };
-      for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(t, up);
+      const k = b.dataset.k, a = A[k]; let pid = null, bx = 0, by = 0;
+      bind(b, {
+        down: (id, x, y) => { if (pid !== null) return; pid = id; bx = x; by = y; b.classList.add('down'); a[0](); Snd.init(); },
+        move: (id, x, y) => { if (k === 'fire' && id === pid) { Input.dx += (x - bx) * K; Input.dy += (y - by) * K; bx = x; by = y; } },
+        up: id => { if (id !== pid) return; pid = null; b.classList.remove('down'); if (a[1]) a[1](); }
+      });
       this.release[k] = () => { if (pid !== null) { pid = null; b.classList.remove('down'); if (a[1]) a[1](); } };
     });
     d.addEventListener('contextmenu', e => e.preventDefault());

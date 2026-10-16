@@ -122,7 +122,7 @@ window.addEventListener('keyup', e => { Input.keys[e.code] = false; });
 window.addEventListener('blur', () => { Input.keys = {}; Input.mouse.l = Input.mouse.r = false; });
 canvas.addEventListener('mousedown', e => {
   if (!Input.captureWanted) return;
-  if (!Input.locked && canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (err) { } }
+  if (!Input.locked) lockPointer();
   if (e.button === 0) { Input.mouse.l = true; Input.mpress.l = true; }
   if (e.button === 2) { Input.mouse.r = true; Input.mpress.r = true; }
   e.preventDefault();
@@ -135,9 +135,14 @@ window.addEventListener('mousemove', e => {
   if (e.movementX || e.movementY) Input.pad = false;
 });
 window.addEventListener('wheel', e => { if (Input.captureWanted) Input.wheel += Math.sign(e.deltaY); }, { passive: true });
+/* Pointer lock freezes clientX/clientY at 0 for every pointer (touch included), which broke the on-screen joystick —
+   so it is never taken while touch controls are active. */
+function lockPointer() { if (Input.touch || !canvas.requestPointerLock) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { }); } catch (err) { } }
+function unlockPointer() { if (document.pointerLockElement && document.exitPointerLock) try { document.exitPointerLock(); } catch (e) { } }
 document.addEventListener('pointerlockchange', () => {
   Input.locked = document.pointerLockElement === canvas;
-  if (!Input.locked && Input.captureWanted && window.Game && Game.state === 'play') Game.pause(true);
+  if (Input.locked && Input.touch) { unlockPointer(); return; }
+  if (!Input.locked && !Input.touch && Input.captureWanted && window.Game && Game.state === 'play') Game.pause(true);
 });
 
 /* ---------- audio (synth) ---------- */
